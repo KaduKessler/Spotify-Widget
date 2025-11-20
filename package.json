@@ -1,0 +1,17 @@
+{
+  "name": "Spotify-Readme",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev:backend": "pnpm --filter backend dev",
+    "build:backend": "pnpm --filter backend build",
+    "start:backend": "pnpm --filter backend start",
+    "lint": "biome lint .",
+    "format": "biome format ."
+  },
+  "license": "GPL-3.0-only",
+  "packageManager": "pnpm@10.22.0",
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.6"
+  }
+}

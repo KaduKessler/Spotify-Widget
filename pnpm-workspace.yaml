@@ -1,0 +1,7 @@
+packages:
+  - backend
+  - admin
+
+onlyBuiltDependencies:
+  - better-sqlite3
+  - esbuild

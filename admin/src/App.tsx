@@ -7,79 +7,226 @@ type Config = {
   theme: 'dark' | 'light'
 }
 
+type Me = {
+  id: string
+  provider: string
+}
+
 export default function App() {
+  const [me, setMe] = useState<Me | null>(null)
+  const [checkingAuth, setCheckingAuth] = useState(true)
+  const [authError, setAuthError] = useState<string | null>(null)
+
   const [config, setConfig] = useState<Config | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loadingConfig, setLoadingConfig] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [configError, setConfigError] = useState<string | null>(null)
   const [previewKey, setPreviewKey] = useState(0)
 
-  // Carrega config inicial
+  const [loginUsername, setLoginUsername] = useState('')
+  const [loginPassword, setLoginPassword] = useState('')
+  const [loginLoading, setLoginLoading] = useState(false)
+
+  // 1. Checa auth (/api/me)
   useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const res = await fetch('/api/me')
+        if (res.status === 401) {
+          setMe(null)
+          return
+        }
+        if (!res.ok) throw new Error('me failed')
+        const data = (await res.json()) as Me
+        setMe(data)
+      } catch (err) {
+        console.error(err)
+        setAuthError('Erro ao verificar autenticação.')
+      } finally {
+        setCheckingAuth(false)
+      }
+    }
+
+    checkAuth()
+  }, [])
+
+  // 2. Carrega config quando autenticado
+  useEffect(() => {
+    if (!me) return
     const fetchConfig = async () => {
+      setLoadingConfig(true)
+      setConfigError(null)
       try {
         const res = await fetch('/api/config')
-        if (!res.ok) throw new Error('Falha ao buscar config')
+        if (!res.ok) throw new Error('config failed')
         const data = (await res.json()) as Config
         setConfig(data)
       } catch (err) {
         console.error(err)
-        setError('Erro ao carregar configuração.')
+        setConfigError('Erro ao carregar configuração.')
       } finally {
-        setLoading(false)
+        setLoadingConfig(false)
       }
     }
-
     fetchConfig()
-  }, [])
+  }, [me])
 
-  const handleSave = async () => {
+  async function handleSave() {
     if (!config) return
     setSaving(true)
-    setError(null)
-
+    setConfigError(null)
     try {
       const res = await fetch('/api/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(config),
       })
-
-      if (!res.ok) throw new Error('Falha ao salvar config')
-
-      // força refresh do preview (busta cache do <img>)
+      if (!res.ok) throw new Error('save failed')
       setPreviewKey((k) => k + 1)
     } catch (err) {
       console.error(err)
-      setError('Erro ao salvar configuração.')
+      setConfigError('Erro ao salvar configuração.')
     } finally {
       setSaving(false)
     }
   }
 
-  const handleModeChange = (mode: Config['mode']) => {
-    setConfig((prev) => (prev ? { ...prev, mode } : prev))
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault()
+    setLoginLoading(true)
+    setAuthError(null)
+
+    try {
+      const res = await fetch('/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: loginUsername,
+          password: loginPassword,
+        }),
+      })
+
+      if (!res.ok) {
+        setAuthError('Usuário ou senha inválidos.')
+        return
+      }
+
+      // Depois de logar, refaz /api/me
+      const meRes = await fetch('/api/me')
+      if (!meRes.ok) {
+        setAuthError('Erro ao obter informações do usuário.')
+        return
+      }
+      const meData = (await meRes.json()) as Me
+      setMe(meData)
+      setLoginPassword('')
+    } catch (err) {
+      console.error(err)
+      setAuthError('Erro ao fazer login.')
+    } finally {
+      setLoginLoading(false)
+    }
   }
 
-  const handleThemeChange = (theme: Config['theme']) => {
-    setConfig((prev) => (prev ? { ...prev, theme } : prev))
+  async function handleLogout() {
+    try {
+      await fetch('/auth/logout', {
+        method: 'POST',
+      })
+    } catch (err) {
+      console.error(err)
+    }
+
+    // Resetar tudo para modo "não autenticado"
+    setMe(null)
   }
 
-  const handleTrackChange = (value: string) => {
-    setConfig((prev) =>
-      prev ? { ...prev, track_id: value.trim() || null } : prev,
-    )
-  }
+  const widgetUrl = `/widget?ts=${previewKey}`
 
-  if (loading || !config) {
+  // Loading inicial
+  if (checkingAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-neutral-900 text-neutral-100">
-        <p className="text-lg text-neutral-300">Carregando painel...</p>
+        <p className="text-lg text-neutral-300">Verificando sessão...</p>
       </div>
     )
   }
 
-  const widgetUrl = `/widget?ts=${previewKey}`
+  // Se não autenticado → tela de login (modo password/none)
+  if (!me) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-neutral-900 text-neutral-100 px-4">
+        <div className="w-full max-w-sm bg-neutral-900/80 border border-neutral-800 rounded-2xl p-6 shadow-2xl">
+          <h1 className="text-xl font-semibold mb-1">Spotify Readme · Login</h1>
+          <p className="text-xs text-neutral-400 mb-4">
+            Acesse o painel admin com usuário e senha configurados no servidor.
+          </p>
+
+          {authError && (
+            <div className="mb-3 rounded-lg bg-red-900/30 border border-red-500/60 px-3 py-2 text-xs">
+              {authError}
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} className="space-y-3">
+            <div>
+              <label
+                htmlFor="login-username"
+                className="block text-xs font-medium mb-1"
+              >
+                Usuário
+              </label>
+              <input
+                id="login-username"
+                className="w-full rounded-lg border border-neutral-700 bg-neutral-900/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/70"
+                value={loginUsername}
+                onChange={(e) => setLoginUsername(e.target.value)}
+                autoComplete="username"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="login-password"
+                className="block text-xs font-medium mb-1"
+              >
+                Senha
+              </label>
+              <input
+                id="login-password"
+                type="password"
+                className="w-full rounded-lg border border-neutral-700 bg-neutral-900/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/70"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                autoComplete="current-password"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loginLoading}
+              className="w-full mt-2 rounded-lg bg-emerald-500/90 hover:bg-emerald-500 text-neutral-900 text-sm font-medium py-2.5 transition disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {loginLoading ? 'Entrando...' : 'Entrar'}
+            </button>
+          </form>
+
+          <p className="mt-4 text-[11px] text-neutral-500">
+            Em modo <code>AUTH_PROVIDER=none</code>, essa tela nem aparece.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // Autenticado → painel normal
+  if (loadingConfig || !config) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-neutral-900 text-neutral-100">
+        <p className="text-lg text-neutral-300">Carregando configuração...</p>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-neutral-900 text-neutral-100 flex items-center justify-center px-4 py-8">
@@ -87,10 +234,18 @@ export default function App() {
         <div className="border-b border-neutral-800 px-6 py-4 flex items-center justify-between gap-4">
           <div>
             <h1 className="text-xl font-semibold">Spotify Readme · Admin</h1>
-            <p className="text-xs text-neutral-400">
-              Controle do widget usado no seu README.
+            <p className="text-xs text-neutral-400 flex items-center gap-3">
+              Logado como <span className="font-mono">{me.id}</span>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="text-[10px] bg-red-500/20 text-red-300 border border-red-500/40 px-2 py-0.5 rounded-md hover:bg-red-500/30 transition"
+              >
+                Logout
+              </button>
             </p>
           </div>
+
           <code className="text-xs text-neutral-400 bg-neutral-950/70 px-3 py-1.5 rounded-lg border border-neutral-800">
             &lt;img src="https://seu-dominio/widget" /&gt;
           </code>
@@ -107,7 +262,7 @@ export default function App() {
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <button
                   type="button"
-                  onClick={() => handleModeChange('NOW_PLAYING')}
+                  onClick={() => setConfig({ ...config, mode: 'NOW_PLAYING' })}
                   className={`rounded-xl border px-3 py-2 text-left transition ${
                     config.mode === 'NOW_PLAYING'
                       ? 'border-emerald-500 bg-emerald-500/10'
@@ -122,7 +277,7 @@ export default function App() {
 
                 <button
                   type="button"
-                  onClick={() => handleModeChange('FIXED_TRACK')}
+                  onClick={() => setConfig({ ...config, mode: 'FIXED_TRACK' })}
                   className={`rounded-xl border px-3 py-2 text-left transition ${
                     config.mode === 'FIXED_TRACK'
                       ? 'border-emerald-500 bg-emerald-500/10'
@@ -140,21 +295,23 @@ export default function App() {
             {/* Track fixa */}
             <section className="space-y-1">
               <label
-                htmlFor="track_id"
+                htmlFor="track-id"
                 className="text-sm font-semibold text-neutral-200"
               >
                 Track fixa
               </label>
               <input
-                id="track_id"
+                id="track-id"
                 type="text"
                 className="w-full rounded-xl border border-neutral-700 bg-neutral-900/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/70"
                 placeholder="Cole aqui o ID ou URL da música no Spotify"
                 value={config.track_id ?? ''}
-                onChange={(e) => handleTrackChange(e.target.value)}
+                onChange={(e) =>
+                  setConfig({ ...config, track_id: e.target.value || null })
+                }
               />
               <p className="text-[11px] text-neutral-500">
-                No futuro a gente faz o parser da URL pra extrair o ID. Por
+                Depois a gente faz o parser da URL pra extrair o ID. Por
                 enquanto, qualquer string vai pro campo <code>track_id</code>.
               </p>
             </section>
@@ -167,7 +324,7 @@ export default function App() {
               <div className="inline-flex rounded-xl border border-neutral-700 bg-neutral-900/70 p-1 text-xs">
                 <button
                   type="button"
-                  onClick={() => handleThemeChange('dark')}
+                  onClick={() => setConfig({ ...config, theme: 'dark' })}
                   className={`px-3 py-1.5 rounded-lg transition ${
                     config.theme === 'dark'
                       ? 'bg-emerald-500 text-neutral-900'
@@ -178,7 +335,7 @@ export default function App() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleThemeChange('light')}
+                  onClick={() => setConfig({ ...config, theme: 'light' })}
                   className={`px-3 py-1.5 rounded-lg transition ${
                     config.theme === 'light'
                       ? 'bg-emerald-500 text-neutral-900'
@@ -192,11 +349,11 @@ export default function App() {
 
             {/* Status + botão salvar */}
             <section className="flex items-center justify-between gap-3 pt-2">
-              {error ? (
-                <span className="text-xs text-red-400">{error}</span>
+              {configError ? (
+                <span className="text-xs text-red-400">{configError}</span>
               ) : (
                 <span className="text-[11px] text-neutral-500">
-                  Última config carregada do banco local.
+                  Config carregada do banco local.
                 </span>
               )}
 
@@ -227,8 +384,8 @@ export default function App() {
               </div>
             </div>
             <p className="text-[11px] text-neutral-500">
-              Esse preview está carregando diretamente de <code>/widget</code>{' '}
-              usando as configs atuais.
+              Esse preview carrega direto de <code>/widget</code> com as configs
+              atuais.
             </p>
           </div>
         </div>

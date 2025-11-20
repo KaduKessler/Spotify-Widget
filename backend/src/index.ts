@@ -1,18 +1,36 @@
 import path from 'node:path'
+import cookie from '@fastify/cookie'
 import fastifyStatic from '@fastify/static'
 import Fastify from 'fastify'
+import { loadConfig } from './lib/config.js'
+import { registerAuthPlugin } from './plugins/auth.js'
 import { registerAdminApi } from './routes/admin.js'
+import { registerPasswordAuthRoutes } from './routes/auth-password.js'
+import { registerMeRoute } from './routes/me.js'
 import { registerWidgetRoute } from './routes/widget'
+
+const env = loadConfig()
 
 async function bootstrap() {
   const app = Fastify({
     logger: true,
   })
 
-  // Rota do widget SVG
-  await registerWidgetRoute(app)
+  await app.register(cookie, {
+    secret: env.SESSION_SECRET,
+    parseOptions: {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: env.NODE_ENV === 'production',
+      path: '/',
+    },
+  })
 
-  // Rotas da API admin
+  await registerAuthPlugin(app)
+  await registerPasswordAuthRoutes(app)
+  await registerMeRoute(app)
+
+  await registerWidgetRoute(app)
   await registerAdminApi(app)
 
   // Futuro: servir o admin (quando existir build em ../admin/dist)

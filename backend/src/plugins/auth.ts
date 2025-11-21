@@ -11,19 +11,24 @@ export async function registerAuthPlugin(app: FastifyInstance) {
   const env = loadConfig()
 
   app.addHook('preHandler', async (request, reply) => {
-    // /widget sempre público
-    if (request.url.startsWith('/widget')) return
+    const url = request.url
 
-    // /auth/* sempre público (login/logout, callback github)
-    if (request.url.startsWith('/auth')) return
+    // Rotas sempre públicas:
+    if (
+      url.startsWith('/widget') ||
+      url.startsWith('/auth') ||
+      url === '/api/auth-config'
+    ) {
+      return
+    }
 
-    // none → tudo liberado, assume userId padrão
+    // Modo none → tudo liberado, user "local"
     if (env.AUTH_PROVIDER === 'none') {
       request.userId = 'local'
       return
     }
 
-    // password/github → precisam de sessão
+    // Password / GitHub → exigem sessão
     const raw = request.cookies.session
     if (!raw) {
       reply.code(401).send({ error: 'Unauthorized' })

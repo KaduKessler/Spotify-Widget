@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { loadConfig } from '../lib/config.js'
+import { upsertUser } from '../lib/db.js'
 
 export async function registerPasswordAuthRoutes(app: FastifyInstance) {
   const env = loadConfig()
@@ -17,6 +18,13 @@ export async function registerPasswordAuthRoutes(app: FastifyInstance) {
     }
 
     const userId = 'local'
+
+    upsertUser({
+      id: userId,
+      provider: 'password',
+      username: env.ADMIN_USERNAME,
+      avatar_url: null,
+    })
 
     reply
       .setCookie('session', userId, {

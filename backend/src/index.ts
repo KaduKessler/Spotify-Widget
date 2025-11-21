@@ -5,6 +5,8 @@ import Fastify from 'fastify'
 import { loadConfig } from './lib/config.js'
 import { registerAuthPlugin } from './plugins/auth.js'
 import { registerAdminApi } from './routes/admin.js'
+import { registerAuthConfigRoute } from './routes/auth-config.js'
+import { registerGithubAuthRoutes } from './routes/auth-github.js'
 import { registerPasswordAuthRoutes } from './routes/auth-password.js'
 import { registerMeRoute } from './routes/me.js'
 import { registerWidgetRoute } from './routes/widget'
@@ -28,8 +30,9 @@ async function bootstrap() {
 
   await registerAuthPlugin(app)
   await registerPasswordAuthRoutes(app)
+  await registerGithubAuthRoutes(app)
+  await registerAuthConfigRoute(app)
   await registerMeRoute(app)
-
   await registerWidgetRoute(app)
   await registerAdminApi(app)
 

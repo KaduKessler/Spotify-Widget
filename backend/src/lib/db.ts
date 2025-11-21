@@ -59,3 +59,55 @@ export function updateConfig({
   `,
   ).run(mode, track_id, theme)
 }
+
+// Cria tabela users se não existir
+db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    provider TEXT NOT NULL,
+    username TEXT,
+    avatar_url TEXT,
+    updated_at INTEGER
+  );
+`)
+
+export type User = {
+  id: string
+  provider: string
+  username?: string | null
+  avatar_url?: string | null
+  updated_at?: number | null
+}
+
+export function upsertUser(user: {
+  id: string
+  provider: string
+  username?: string | null
+  avatar_url?: string | null
+}) {
+  const now = Date.now()
+  db.prepare(
+    `INSERT INTO users (id, provider, username, avatar_url, updated_at)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET
+       username = excluded.username,
+       avatar_url = excluded.avatar_url,
+       updated_at = excluded.updated_at;
+    `,
+  ).run(
+    user.id,
+    user.provider,
+    user.username || null,
+    user.avatar_url || null,
+    now,
+  )
+}
+
+export function getUserById(id: string): User | undefined {
+  const row = db
+    .prepare(
+      'SELECT id, provider, username, avatar_url, updated_at FROM users WHERE id = ?',
+    )
+    .get(id)
+  return row as User | undefined
+}

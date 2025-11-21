@@ -16,6 +16,7 @@ export function loadConfig() {
     GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID || '',
     GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET || '',
     APP_URL: process.env.APP_URL || 'http://localhost:3000',
+    ADMIN_URL: process.env.ADMIN_URL || 'http://localhost:5173',
   }
 }
 

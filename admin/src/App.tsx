@@ -12,7 +12,10 @@ type Me = {
   provider: string
 }
 
+type AuthProvider = 'none' | 'password' | 'github'
+
 export default function App() {
+  const [authProvider, setAuthProvider] = useState<AuthProvider | null>(null)
   const [me, setMe] = useState<Me | null>(null)
   const [checkingAuth, setCheckingAuth] = useState(true)
   const [authError, setAuthError] = useState<string | null>(null)
@@ -27,9 +30,30 @@ export default function App() {
   const [loginPassword, setLoginPassword] = useState('')
   const [loginLoading, setLoginLoading] = useState(false)
 
-  // 1. Checa auth (/api/me)
+  // 1) Descobre qual provider está ativo
   useEffect(() => {
+    const fetchAuthConfig = async () => {
+      try {
+        const res = await fetch('/api/auth-config')
+        if (!res.ok) throw new Error('auth-config failed')
+        const data = (await res.json()) as { provider: AuthProvider }
+        setAuthProvider(data.provider)
+      } catch (err) {
+        console.error(err)
+        setAuthError('Erro ao carregar configuração de autenticação.')
+      }
+    }
+
+    fetchAuthConfig()
+  }, [])
+
+  // 2) Checa sessão (/api/me) depois de saber o provider
+  useEffect(() => {
+    if (!authProvider) return
+
     const checkAuth = async () => {
+      setCheckingAuth(true)
+      setAuthError(null)
       try {
         const res = await fetch('/api/me')
         if (res.status === 401) {
@@ -48,9 +72,9 @@ export default function App() {
     }
 
     checkAuth()
-  }, [])
+  }, [authProvider])
 
-  // 2. Carrega config quando autenticado
+  // 3) Carrega config quando autenticado
   useEffect(() => {
     if (!me) return
     const fetchConfig = async () => {
@@ -91,7 +115,7 @@ export default function App() {
     }
   }
 
-  async function handleLogin(e: React.FormEvent) {
+  async function handleLoginPassword(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setLoginLoading(true)
     setAuthError(null)
@@ -111,7 +135,6 @@ export default function App() {
         return
       }
 
-      // Depois de logar, refaz /api/me
       const meRes = await fetch('/api/me')
       if (!meRes.ok) {
         setAuthError('Erro ao obter informações do usuário.')
@@ -130,91 +153,137 @@ export default function App() {
 
   async function handleLogout() {
     try {
-      await fetch('/auth/logout', {
-        method: 'POST',
-      })
+      await fetch('/auth/logout', { method: 'POST' })
     } catch (err) {
       console.error(err)
     }
-
-    // Resetar tudo para modo "não autenticado"
     setMe(null)
+  }
+
+  function handleLoginWithGithub() {
+    window.location.href = '/auth/github'
   }
 
   const widgetUrl = `/widget?ts=${previewKey}`
 
-  // Loading inicial
-  if (checkingAuth) {
+  // LOADING inicial
+  if (!authProvider || checkingAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-neutral-900 text-neutral-100">
-        <p className="text-lg text-neutral-300">Verificando sessão...</p>
+        <p className="text-lg text-neutral-300">Carregando painel...</p>
       </div>
     )
   }
 
-  // Se não autenticado → tela de login (modo password/none)
+  // Se não autenticado → tela de login adequada pro provider
   if (!me) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-900 text-neutral-100 px-4">
-        <div className="w-full max-w-sm bg-neutral-900/80 border border-neutral-800 rounded-2xl p-6 shadow-2xl">
-          <h1 className="text-xl font-semibold mb-1">Spotify Readme · Login</h1>
-          <p className="text-xs text-neutral-400 mb-4">
-            Acesse o painel admin com usuário e senha configurados no servidor.
-          </p>
+    if (authProvider === 'password') {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-neutral-900 text-neutral-100 px-4">
+          <div className="w-full max-w-sm bg-neutral-900/80 border border-neutral-800 rounded-2xl p-6 shadow-2xl">
+            <h1 className="text-xl font-semibold mb-1">
+              Spotify Readme · Login
+            </h1>
+            <p className="text-xs text-neutral-400 mb-4">
+              Acesse o painel admin com usuário e senha configurados no
+              servidor.
+            </p>
 
-          {authError && (
-            <div className="mb-3 rounded-lg bg-red-900/30 border border-red-500/60 px-3 py-2 text-xs">
-              {authError}
-            </div>
-          )}
+            {authError && (
+              <div className="mb-3 rounded-lg bg-red-900/30 border border-red-500/60 px-3 py-2 text-xs">
+                {authError}
+              </div>
+            )}
 
-          <form onSubmit={handleLogin} className="space-y-3">
-            <div>
-              <label
-                htmlFor="login-username"
-                className="block text-xs font-medium mb-1"
+            <form onSubmit={handleLoginPassword} className="space-y-3">
+              <div>
+                <label
+                  htmlFor="username"
+                  className="block text-xs font-medium mb-1"
+                >
+                  Usuário
+                </label>
+                <input
+                  id="username"
+                  className="w-full rounded-lg border border-neutral-700 bg-neutral-900/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/70"
+                  value={loginUsername}
+                  onChange={(e) => setLoginUsername(e.target.value)}
+                  autoComplete="username"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="password"
+                  className="block text-xs font-medium mb-1"
+                >
+                  Senha
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  className="w-full rounded-lg border border-neutral-700 bg-neutral-900/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/70"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  autoComplete="current-password"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loginLoading}
+                className="w-full mt-2 rounded-lg bg-emerald-500/90 hover:bg-emerald-500 text-neutral-900 text-sm font-medium py-2.5 transition disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Usuário
-              </label>
-              <input
-                id="login-username"
-                className="w-full rounded-lg border border-neutral-700 bg-neutral-900/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/70"
-                value={loginUsername}
-                onChange={(e) => setLoginUsername(e.target.value)}
-                autoComplete="username"
-              />
-            </div>
+                {loginLoading ? 'Entrando...' : 'Entrar'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )
+    }
 
-            <div>
-              <label
-                htmlFor="login-password"
-                className="block text-xs font-medium mb-1"
-              >
-                Senha
-              </label>
-              <input
-                id="login-password"
-                type="password"
-                className="w-full rounded-lg border border-neutral-700 bg-neutral-900/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/70"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                autoComplete="current-password"
-              />
-            </div>
+    if (authProvider === 'github') {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-neutral-900 text-neutral-100 px-4">
+          <div className="w-full max-w-sm bg-neutral-900/80 border border-neutral-800 rounded-2xl p-6 shadow-2xl">
+            <h1 className="text-xl font-semibold mb-1">
+              Spotify Readme · Login
+            </h1>
+            <p className="text-xs text-neutral-400 mb-4">
+              Entre com sua conta do GitHub para acessar o painel admin.
+            </p>
+
+            {authError && (
+              <div className="mb-3 rounded-lg bg-red-900/30 border border-red-500/60 px-3 py-2 text-xs">
+                {authError}
+              </div>
+            )}
 
             <button
-              type="submit"
-              disabled={loginLoading}
-              className="w-full mt-2 rounded-lg bg-emerald-500/90 hover:bg-emerald-500 text-neutral-900 text-sm font-medium py-2.5 transition disabled:opacity-60 disabled:cursor-not-allowed"
+              type="button"
+              onClick={handleLoginWithGithub}
+              className="w-full mt-2 rounded-lg bg-neutral-100 text-neutral-900 text-sm font-semibold py-2.5 transition hover:bg-white flex items-center justify-center gap-2"
             >
-              {loginLoading ? 'Entrando...' : 'Entrar'}
+              <svg
+                viewBox="0 0 16 16"
+                aria-hidden="true"
+                className="w-4 h-4 fill-neutral-900"
+              >
+                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.54 5.47 7.59.4.07.55-.17.55-.38 0-.19 0-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8Z" />
+              </svg>
+              <span>Entrar com GitHub</span>
             </button>
-          </form>
-
-          <p className="mt-4 text-[11px] text-neutral-500">
-            Em modo <code>AUTH_PROVIDER=none</code>, essa tela nem aparece.
-          </p>
+          </div>
         </div>
+      )
+    }
+
+    // authProvider === "none" e mesmo assim sem me → algo errado
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-neutral-900 text-neutral-100">
+        <p className="text-sm text-red-300">
+          Algo deu errado com a autenticação (modo none).
+        </p>
       </div>
     )
   }
@@ -236,16 +305,17 @@ export default function App() {
             <h1 className="text-xl font-semibold">Spotify Readme · Admin</h1>
             <p className="text-xs text-neutral-400 flex items-center gap-3">
               Logado como <span className="font-mono">{me.id}</span>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="text-[10px] bg-red-500/20 text-red-300 border border-red-500/40 px-2 py-0.5 rounded-md hover:bg-red-500/30 transition"
-              >
-                Logout
-              </button>
+              {authProvider !== 'none' && (
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="text-[10px] bg-red-500/20 text-red-300 border border-red-500/40 px-2 py-0.5 rounded-md hover:bg-red-500/30 transition"
+                >
+                  Logout
+                </button>
+              )}
             </p>
           </div>
-
           <code className="text-xs text-neutral-400 bg-neutral-950/70 px-3 py-1.5 rounded-lg border border-neutral-800">
             &lt;img src="https://seu-dominio/widget" /&gt;
           </code>
@@ -295,13 +365,13 @@ export default function App() {
             {/* Track fixa */}
             <section className="space-y-1">
               <label
-                htmlFor="track-id"
+                htmlFor="track_id"
                 className="text-sm font-semibold text-neutral-200"
               >
                 Track fixa
               </label>
               <input
-                id="track-id"
+                id="track_id"
                 type="text"
                 className="w-full rounded-xl border border-neutral-700 bg-neutral-900/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/70"
                 placeholder="Cole aqui o ID ou URL da música no Spotify"

@@ -23,7 +23,7 @@ export async function registerAuthPlugin(app: FastifyInstance) {
     }
 
     // Modo none → tudo liberado, usa ADMIN_USERNAME como username de sessão
-    if (env.AUTH_PROVIDER === 'none') {
+    if (env.ENABLE_NONE_AUTH) {
       request.username = env.ADMIN_USERNAME
       return
     }

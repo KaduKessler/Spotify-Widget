@@ -6,7 +6,7 @@ import { upsertUser } from '../lib/db.js'
 export async function registerGithubAuthRoutes(app: FastifyInstance) {
   const env = loadConfig()
 
-  if (env.AUTH_PROVIDER !== 'github') return
+  if (!env.ENABLE_GITHUB_AUTH) return
 
   const redirectUri = `${env.APP_URL.replace(/\/$/, '')}/auth/github/callback`
 

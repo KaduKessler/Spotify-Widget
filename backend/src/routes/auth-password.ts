@@ -47,7 +47,7 @@ function resetFailures(key: string) {
 export async function registerPasswordAuthRoutes(app: FastifyInstance) {
   const env = loadConfig()
 
-  if (env.AUTH_PROVIDER !== 'password') return
+  if (!env.ENABLE_PASSWORD_AUTH) return
 
   app.post('/login', async (request, reply) => {
     const body = request.body as { username?: string; password?: string }

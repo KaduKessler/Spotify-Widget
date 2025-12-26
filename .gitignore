@@ -1,17 +1,16 @@
-# .gitignore básico
-
 # Sistema / OS
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# Node.js
+# Node.js / pnpm
 node_modules/
 dist/
 build/
 .cache/
 npm-debug.log*
 yarn-debug.log*
+pnpm-debug.log*
 lerna-debug.log*
 
 # Arquivos de ambiente
@@ -29,6 +28,19 @@ logs/
 *.suo
 *.user
 *.swp
+*.swo
+
+# TypeScript
+*.tsbuildinfo
+
+# Prisma
+.prisma/
+/backend/src/generated/prisma-client
 
 # Database
 *.sqlite
+*.db
+/backend/data/
+
+# Admin build
+/admin/dist

@@ -165,6 +165,11 @@ export default function App() {
   }
 
   const widgetUrl = `/widget?ts=${previewKey}`
+  const backendBase =
+    (import.meta.env.VITE_BACKEND_URL as string) || 'http://localhost:3000'
+  const jsonUrl = me
+    ? `${backendBase}/user/api/${encodeURIComponent(me.id)}`
+    : `${backendBase}/user/api/`
 
   // LOADING inicial
   if (!authProvider || checkingAuth) {
@@ -316,9 +321,19 @@ export default function App() {
               )}
             </p>
           </div>
-          <code className="text-xs text-neutral-400 bg-neutral-950/70 px-3 py-1.5 rounded-lg border border-neutral-800">
-            &lt;img src="https://seu-dominio/widget" /&gt;
-          </code>
+          <div className="flex items-center gap-3">
+            <code className="text-xs text-neutral-400 bg-neutral-950/70 px-3 py-1.5 rounded-lg border border-neutral-800">
+              &lt;img src="https://seu-dominio/widget" /&gt;
+            </code>
+            <a
+              href={jsonUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-neutral-300 bg-neutral-950/60 px-3 py-1.5 rounded-lg border border-neutral-800 hover:bg-neutral-900/80"
+            >
+              Ver JSON do usuário
+            </a>
+          </div>
         </div>
 
         <div className="grid gap-6 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] px-6 py-6">

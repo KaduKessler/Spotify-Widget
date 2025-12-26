@@ -1,6 +1,7 @@
+import { randomBytes, timingSafeEqual } from 'node:crypto'
 import type { FastifyInstance } from 'fastify'
 import { loadConfig } from '../lib/config.js'
-import { upsertUser } from '../lib/db.js' // ajuste caminho/exports
+import { upsertUser } from '../lib/db.js'
 
 export async function registerGithubAuthRoutes(app: FastifyInstance) {
   const env = loadConfig()
@@ -11,21 +12,49 @@ export async function registerGithubAuthRoutes(app: FastifyInstance) {
 
   // 1) Início do login: redireciona pro GitHub
   app.get('/auth/github', async (_req, reply) => {
+    // Gera um `state` aleatório e armazena em cookie assinado (Double Submit Cookie)
+    const state = randomBytes(16).toString('hex')
+    reply.setCookie('oauth_state', state, {
+      signed: true,
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: env.NODE_ENV === 'production',
+      path: '/',
+      maxAge: 60 * 5, // 5 minutos
+    })
+
     const url = new URL('https://github.com/login/oauth/authorize')
     url.searchParams.set('client_id', env.GITHUB_CLIENT_ID)
     url.searchParams.set('redirect_uri', redirectUri)
     url.searchParams.set('scope', 'read:user')
+    url.searchParams.set('state', state)
 
     return reply.redirect(url.toString())
   })
 
   // 2) Callback do GitHub: troca o "code" por access_token, pega user e cria sessão
   app.get('/auth/github/callback', async (request, reply) => {
-    const { code } = request.query as { code?: string }
+    const { code, state } = request.query as { code?: string; state?: string }
 
     if (!code) {
       return reply.code(400).send({ error: 'Missing code' })
     }
+
+    // Valida o `state` contra o cookie assinado
+    const rawStateCookie = request.cookies.oauth_state
+    const unsign = rawStateCookie
+      ? reply.unsignCookie(rawStateCookie)
+      : { valid: false, value: '' }
+    if (!state || !unsign.valid || !unsign.value) {
+      return reply.code(400).send({ error: 'Invalid state' })
+    }
+    const a = Buffer.from(state)
+    const b = Buffer.from(unsign.value)
+    if (a.length !== b.length || !timingSafeEqual(a, b)) {
+      return reply.code(400).send({ error: 'Invalid state' })
+    }
+    // Limpa o cookie de state
+    reply.clearCookie('oauth_state', { path: '/' })
 
     // Troca code por access_token
     const tokenRes = await fetch(
@@ -82,18 +111,16 @@ export async function registerGithubAuthRoutes(app: FastifyInstance) {
       avatar_url?: string
     }
 
-    // por enquanto, só usamos um id estável baseado no GitHub
-    const userId = `github:${user.id}`
-
-    upsertUser({
-      id: userId,
+    // Garante presença do usuário no banco (username único)
+    await upsertUser({
       provider: 'github',
       username: user.login,
-      avatar_url: user.avatar_url || null,
+      avatarUrl: user.avatar_url || null,
     })
 
     reply
-      .setCookie('session', userId, {
+      // Armazena o username na sessão
+      .setCookie('session', user.login, {
         signed: true,
         httpOnly: true,
         sameSite: 'lax',

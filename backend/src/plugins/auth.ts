@@ -3,7 +3,7 @@ import { loadConfig } from '../lib/config.js'
 
 declare module 'fastify' {
   interface FastifyRequest {
-    userId?: string
+    username?: string
   }
 }
 
@@ -22,9 +22,9 @@ export async function registerAuthPlugin(app: FastifyInstance) {
       return
     }
 
-    // Modo none → tudo liberado, user "local"
+    // Modo none → tudo liberado, usa ADMIN_USERNAME como username de sessão
     if (env.AUTH_PROVIDER === 'none') {
-      request.userId = 'local'
+      request.username = env.ADMIN_USERNAME
       return
     }
 
@@ -41,6 +41,7 @@ export async function registerAuthPlugin(app: FastifyInstance) {
       return
     }
 
-    request.userId = unsign.value
+    // O cookie de sessão armazena o username
+    request.username = unsign.value
   })
 }

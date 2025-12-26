@@ -17,17 +17,16 @@ export async function registerPasswordAuthRoutes(app: FastifyInstance) {
       return reply.code(401).send({ error: 'Invalid credentials' })
     }
 
-    const userId = 'local'
-
-    upsertUser({
-      id: userId,
+    // Garante presença do usuário no banco (username único)
+    await upsertUser({
       provider: 'password',
       username: env.ADMIN_USERNAME,
-      avatar_url: null,
+      avatarUrl: null,
     })
 
     reply
-      .setCookie('session', userId, {
+      // Armazena o username na sessão
+      .setCookie('session', env.ADMIN_USERNAME, {
         signed: true,
         httpOnly: true,
         sameSite: 'lax',

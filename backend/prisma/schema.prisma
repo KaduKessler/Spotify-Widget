@@ -1,0 +1,40 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma-client"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// User model - ID auto-increment interno, username único para URLs públicas
+model User {
+  id        Int      @id @default(autoincrement())
+  provider  String   // 'github', 'password', 'none'
+  username  String   @unique // Nome único para URL pública
+  avatarUrl String?  @map("avatar_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  config WidgetConfig?
+
+  @@map("users")
+}
+
+// Widget configuration - Uma config por usuário
+model WidgetConfig {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique @map("user_id")
+  mode      String   @default("NOW_PLAYING") // 'NOW_PLAYING' ou 'FIXED_TRACK'
+  trackId   String?  @map("track_id") // ID da track fixa (se mode = FIXED_TRACK)
+  theme     String   @default("dark") // 'dark' ou 'light'
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("widget_config")
+}

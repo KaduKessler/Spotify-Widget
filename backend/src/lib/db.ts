@@ -1,113 +1,149 @@
-import fs from 'node:fs'
-import path from 'node:path'
-import Database from 'better-sqlite3'
+import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
+import {
+  PrismaClient,
+  type User as PrismaUser,
+  type WidgetConfig as PrismaWidgetConfig,
+} from '../generated/prisma-client/client'
 
-const dataDir = path.join(process.cwd(), 'data')
-
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true })
+// Singleton pattern para Prisma Client
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined
 }
 
-const dbPath = path.join(dataDir, 'db.sqlite')
-const db = new Database(dbPath)
+// Adapter obrigatório no Prisma v7 (engineType "client")
+const adapter = new PrismaBetterSqlite3({
+  url: process.env.DATABASE_URL ?? 'file:./data/db.sqlite',
+})
 
-// Cria tabela widget_config se não existir
-db.exec(`
-  CREATE TABLE IF NOT EXISTS widget_config (
-    id INTEGER PRIMARY KEY,
-    mode TEXT NOT NULL DEFAULT 'NOW_PLAYING',
-    track_id TEXT,
-    theme TEXT NOT NULL DEFAULT 'dark'
-  );
-`)
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    adapter,
+    log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+  })
 
-// Garante um registro único com id = 1
-db.exec(`
-  INSERT OR IGNORE INTO widget_config (id, mode, theme)
-  VALUES (1, 'NOW_PLAYING', 'dark');
-`)
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
-export type WidgetConfig = {
-  id: number
-  mode: 'NOW_PLAYING' | 'FIXED_TRACK'
-  track_id: string | null
-  theme: 'dark' | 'light'
-}
+// ========================
+// Types exportados
+// ========================
 
-export function getConfig(): WidgetConfig {
-  const row = db
-    .prepare('SELECT id, mode, track_id, theme FROM widget_config WHERE id = 1')
-    .get() as WidgetConfig
+export type User = PrismaUser
+export type WidgetConfig = PrismaWidgetConfig
 
-  return row
-}
+// ========================
+// User functions
+// ========================
 
-export function updateConfig({
-  mode,
-  track_id,
-  theme,
-}: {
-  mode: 'NOW_PLAYING' | 'FIXED_TRACK'
-  track_id: string | null
-  theme: 'dark' | 'light'
-}) {
-  db.prepare(
-    `
-    UPDATE widget_config
-    SET mode = ?, track_id = ?, theme = ?
-    WHERE id = 1
-  `,
-  ).run(mode, track_id, theme)
-}
-
-// Cria tabela users se não existir
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id TEXT PRIMARY KEY,
-    provider TEXT NOT NULL,
-    username TEXT,
-    avatar_url TEXT,
-    updated_at INTEGER
-  );
-`)
-
-export type User = {
-  id: string
+/**
+ * Cria ou atualiza um usuário
+ */
+export async function upsertUser(data: {
   provider: string
-  username?: string | null
-  avatar_url?: string | null
-  updated_at?: number | null
+  username: string
+  avatarUrl?: string | null
+}): Promise<User> {
+  return prisma.user.upsert({
+    where: { username: data.username },
+    update: {
+      ...(data.avatarUrl !== undefined ? { avatarUrl: data.avatarUrl } : {}),
+      updatedAt: new Date(),
+    },
+    create: {
+      provider: data.provider,
+      username: data.username,
+      avatarUrl: data.avatarUrl || null,
+    },
+  })
 }
 
-export function upsertUser(user: {
-  id: string
-  provider: string
-  username?: string | null
-  avatar_url?: string | null
-}) {
-  const now = Date.now()
-  db.prepare(
-    `INSERT INTO users (id, provider, username, avatar_url, updated_at)
-     VALUES (?, ?, ?, ?, ?)
-     ON CONFLICT(id) DO UPDATE SET
-       username = excluded.username,
-       avatar_url = excluded.avatar_url,
-       updated_at = excluded.updated_at;
-    `,
-  ).run(
-    user.id,
-    user.provider,
-    user.username || null,
-    user.avatar_url || null,
-    now,
-  )
+/**
+ * Busca usuário por username (usado nas URLs públicas)
+ */
+export async function getUserByUsername(
+  username: string,
+): Promise<User | null> {
+  return prisma.user.findUnique({
+    where: { username },
+  })
 }
 
-export function getUserById(id: string): User | undefined {
-  const row = db
-    .prepare(
-      'SELECT id, provider, username, avatar_url, updated_at FROM users WHERE id = ?',
-    )
-    .get(id)
-  return row as User | undefined
+/**
+ * Busca usuário por ID interno
+ */
+export async function getUserById(id: number): Promise<User | null> {
+  return prisma.user.findUnique({
+    where: { id },
+  })
 }
+
+// ========================
+// Widget Config functions
+// ========================
+
+/**
+ * Busca configuração de widget por username
+ */
+export async function getConfigByUsername(
+  username: string,
+): Promise<WidgetConfig | null> {
+  const user = await prisma.user.findUnique({
+    where: { username },
+    include: { config: true },
+  })
+
+  return user?.config || null
+}
+
+/**
+ * Busca configuração de widget por userId
+ */
+export async function getConfigByUserId(
+  userId: number,
+): Promise<WidgetConfig | null> {
+  return prisma.widgetConfig.findUnique({
+    where: { userId },
+  })
+}
+
+/**
+ * Cria ou atualiza configuração de widget
+ */
+export async function upsertConfig(
+  userId: number,
+  data: {
+    mode: 'NOW_PLAYING' | 'FIXED_TRACK'
+    trackId?: string | null
+    theme: 'dark' | 'light'
+  },
+): Promise<WidgetConfig> {
+  return prisma.widgetConfig.upsert({
+    where: { userId },
+    update: {
+      mode: data.mode,
+      trackId: data.trackId || null,
+      theme: data.theme,
+      updatedAt: new Date(),
+    },
+    create: {
+      userId,
+      mode: data.mode,
+      trackId: data.trackId || null,
+      theme: data.theme,
+    },
+  })
+}
+
+/**
+ * Deleta configuração de widget (se necessário)
+ */
+export async function deleteConfig(userId: number): Promise<void> {
+  await prisma.widgetConfig.delete({
+    where: { userId },
+  })
+}
+
+// Graceful shutdown
+process.on('beforeExit', async () => {
+  await prisma.$disconnect()
+})

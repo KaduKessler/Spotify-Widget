@@ -1,23 +1,23 @@
 import type { FastifyInstance } from 'fastify'
-import { getUserById } from '../lib/db.js'
+import { getUserByUsername } from '../lib/db.js'
 
 export async function registerMeRoute(app: FastifyInstance) {
   app.get('/api/me', async (request, reply) => {
-    if (!request.userId) {
+    if (!request.username) {
       return reply.code(401).send({ error: 'Not authenticated' })
     }
 
-    const user = getUserById(request.userId)
+    const user = await getUserByUsername(request.username)
     if (!user) {
-      // fallback: retorna apenas id/provider
-      return { id: request.userId, provider: 'password' }
+      // fallback: retorna apenas username/provider
+      return { id: request.username, provider: 'password' }
     }
 
     return {
-      id: user.id,
+      id: user.username, // compatível com frontend atual que usa id para montar URL pública
       provider: user.provider,
       username: user.username,
-      avatar_url: user.avatar_url,
+      avatar_url: user.avatarUrl,
     }
   })
 }

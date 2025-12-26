@@ -5,7 +5,50 @@ function parseBoolean(value: string | undefined, defaultValue: boolean): boolean
   return value.toLowerCase() === 'true' || value === '1'
 }
 
-export function loadConfig() {
+function validateConfig(config: ReturnType<typeof buildConfig>) {
+  const errors: string[] = []
+
+  // Validar que pelo menos um método de auth está habilitado
+  if (!config.ENABLE_PASSWORD_AUTH && !config.ENABLE_GITHUB_AUTH && !config.ENABLE_NONE_AUTH) {
+    errors.push('At least one auth method must be enabled (ENABLE_PASSWORD_AUTH, ENABLE_GITHUB_AUTH, or ENABLE_NONE_AUTH)')
+  }
+
+  // Validar password auth requirements
+  if (config.ENABLE_PASSWORD_AUTH) {
+    if (!config.ADMIN_USERNAME || config.ADMIN_USERNAME === 'admin') {
+      errors.push('ADMIN_USERNAME must be set to a secure value when password auth is enabled')
+    }
+    if (!config.ADMIN_PASSWORD || config.ADMIN_PASSWORD === 'admin' || config.ADMIN_PASSWORD.length < 8) {
+      errors.push('ADMIN_PASSWORD must be set to a strong password (min 8 chars) when password auth is enabled')
+    }
+  }
+
+  // Validar GitHub OAuth requirements
+  if (config.ENABLE_GITHUB_AUTH) {
+    if (!config.GITHUB_CLIENT_ID || config.GITHUB_CLIENT_ID === 'your_github_client_id') {
+      errors.push('GITHUB_CLIENT_ID must be set when GitHub auth is enabled')
+    }
+    if (!config.GITHUB_CLIENT_SECRET || config.GITHUB_CLIENT_SECRET === 'your_github_client_secret') {
+      errors.push('GITHUB_CLIENT_SECRET must be set when GitHub auth is enabled')
+    }
+  }
+
+  // Validar session secret em produção
+  if (config.NODE_ENV === 'production' && (!config.SESSION_SECRET || config.SESSION_SECRET === 'devSessionSecret' || config.SESSION_SECRET.length < 32)) {
+    errors.push('SESSION_SECRET must be set to a strong random value (min 32 chars) in production. Generate with: openssl rand -hex 32')
+  }
+
+  if (errors.length > 0) {
+    console.error('\n❌ Configuration errors:\n')
+    for (const error of errors) {
+      console.error(`  - ${error}`)
+    }
+    console.error('\nPlease check your .env file and fix the issues above.\n')
+    throw new Error('Invalid configuration')
+  }
+}
+
+function buildConfig() {
   // Multi-provider support: permite habilitar múltiplos métodos de auth
   const ENABLE_PASSWORD_AUTH = parseBoolean(process.env.ENABLE_PASSWORD_AUTH, false)
   const ENABLE_GITHUB_AUTH = parseBoolean(process.env.ENABLE_GITHUB_AUTH, false)
@@ -45,6 +88,25 @@ export function loadConfig() {
     APP_URL: process.env.APP_URL || 'http://localhost:3000',
     ADMIN_URL: process.env.ADMIN_URL || 'http://localhost:5173',
   }
+}
+
+export function loadConfig() {
+  const config = buildConfig()
+
+  // Validar apenas em produção ou se NODE_ENV=production
+  if (config.NODE_ENV === 'production') {
+    validateConfig(config)
+  } else {
+    // Em dev, apenas avisar sobre configurações fracas
+    if (config.ENABLE_PASSWORD_AUTH && config.ADMIN_PASSWORD === 'admin') {
+      console.warn('⚠️  Warning: Using default ADMIN_PASSWORD. Change it in production!')
+    }
+    if (config.SESSION_SECRET === 'devSessionSecret') {
+      console.warn('⚠️  Warning: Using default SESSION_SECRET. Change it in production!')
+    }
+  }
+
+  return config
 }
 
 export type AppConfig = ReturnType<typeof loadConfig>

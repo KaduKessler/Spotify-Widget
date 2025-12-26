@@ -1,5 +1,6 @@
 import path from 'node:path'
 import cookie from '@fastify/cookie'
+import cors from '@fastify/cors'
 import rateLimit from '@fastify/rate-limit'
 import fastifyStatic from '@fastify/static'
 import Fastify from 'fastify'
@@ -10,13 +11,72 @@ import { registerAuthConfigRoute } from './routes/auth-config.js'
 import { registerGithubAuthRoutes } from './routes/auth-github.js'
 import { registerPasswordAuthRoutes } from './routes/auth-password.js'
 import { registerMeRoute } from './routes/me.js'
+import { registerSpotifyConfigRoutes } from './routes/spotify-config.js'
 import { registerWidgetRoute } from './routes/widget'
 
 const env = loadConfig()
 
 async function bootstrap() {
   const app = Fastify({
-    logger: true,
+    logger: env.NODE_ENV === 'development'
+      ? {
+        level: 'debug',
+        transport: {
+          target: 'pino-pretty',
+          options: {
+            colorize: true,
+            ignore: 'pid,hostname',
+            translateTime: 'HH:MM:ss',
+          },
+        },
+      }
+      : {
+        level: 'info',
+      },
+  })
+
+  // Error handler global
+  app.setErrorHandler((error, request, reply) => {
+    const err = error as Error & { statusCode?: number }
+    const statusCode = err.statusCode || 500
+
+    app.log.error({
+      err: error,
+      req: { method: request.method, url: request.url },
+    }, 'Request error')
+
+    // Não expor detalhes internos em produção
+    const message = statusCode >= 500 && env.NODE_ENV === 'production'
+      ? 'Internal server error'
+      : err.message
+
+    reply.status(statusCode).send({
+      error: err.name || 'Error',
+      message,
+      statusCode,
+    })
+  })
+
+  // Health check endpoints
+  app.get('/health', async () => {
+    return { status: 'ok', timestamp: new Date().toISOString() }
+  })
+
+  app.get('/ready', async () => {
+    // Aqui poderia verificar DB, cache, etc
+    return {
+      status: 'ready',
+      timestamp: new Date().toISOString(),
+      env: env.NODE_ENV,
+    }
+  })
+
+  // CORS - permitir admin em domínio diferente
+  await app.register(cors, {
+    origin: env.NODE_ENV === 'production'
+      ? [env.APP_URL, env.ADMIN_URL]
+      : true, // Em dev, permite qualquer origem
+    credentials: true, // Permite cookies
   })
 
   await app.register(cookie, {
@@ -60,6 +120,7 @@ async function bootstrap() {
   await registerAuthPlugin(app)
   await registerAuthConfigRoute(app)
   await registerMeRoute(app)
+  await registerSpotifyConfigRoutes(app)
   await registerWidgetRoute(app)
   await registerAdminApi(app)
 
@@ -71,10 +132,26 @@ async function bootstrap() {
   })
 
   await app.listen({ port: 3000, host: '0.0.0.0' })
-  console.log('Backend rodando em http://localhost:3000')
+  app.log.info('Backend rodando em http://localhost:3000')
+
+  // Graceful shutdown
+  const signals = ['SIGINT', 'SIGTERM']
+  for (const signal of signals) {
+    process.on(signal, async () => {
+      app.log.info(`Received ${signal}, closing server gracefully...`)
+      try {
+        await app.close()
+        app.log.info('Server closed successfully')
+        process.exit(0)
+      } catch (err) {
+        app.log.error(err, 'Error during shutdown')
+        process.exit(1)
+      }
+    })
+  }
 }
 
 bootstrap().catch((err) => {
-  console.error(err)
+  console.error('Failed to start server:', err)
   process.exit(1)
 })

@@ -16,6 +16,11 @@ model User {
   provider  String   // 'github', 'password', 'none'
   username  String   @unique // Nome único para URL pública
   avatarUrl String?  @map("avatar_url")
+  
+  // Spotify credentials per-user (optional)
+  spotifyClientId     String? @map("spotify_client_id")
+  spotifyClientSecret String? @map("spotify_client_secret")
+  
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

@@ -57,6 +57,18 @@ export default function App() {
   const [loginLoading, setLoginLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
+  // Spotify config states
+  const [spotifyConfig, setSpotifyConfig] = useState<{
+    configured: boolean
+    clientId: string | null
+    clientSecret: string | null
+  } | null>(null)
+  const [spotifyClientId, setSpotifyClientId] = useState('')
+  const [spotifyClientSecret, setSpotifyClientSecret] = useState('')
+  const [savingSpotify, setSavingSpotify] = useState(false)
+  const [spotifyError, setSpotifyError] = useState<string | null>(null)
+  const [spotifySuccess, setSpotifySuccess] = useState<string | null>(null)
+
   // 1) Descobre quais providers estão ativos (suporta múltiplos)
   useEffect(() => {
     const fetchAuthConfig = async () => {
@@ -132,6 +144,25 @@ export default function App() {
     fetchConfig()
   }, [me])
 
+  // 4) Carrega Spotify config quando autenticado
+  useEffect(() => {
+    if (!me) return
+    const fetchSpotifyConfig = async () => {
+      try {
+        const res = await fetch('/api/spotify-config')
+        if (!res.ok) throw new Error('spotify-config failed')
+        const data = await res.json() as { configured: boolean; clientId: string | null; clientSecret: string | null }
+        setSpotifyConfig(data)
+        if (data.clientId) {
+          setSpotifyClientId(data.clientId)
+        }
+      } catch (err) {
+        console.error(err)
+      }
+    }
+    fetchSpotifyConfig()
+  }, [me])
+
   async function handleSave() {
     if (!config) return
     setSaving(true)
@@ -149,6 +180,73 @@ export default function App() {
       setConfigError('Erro ao salvar configuração.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleSaveSpotify(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setSavingSpotify(true)
+    setSpotifyError(null)
+    setSpotifySuccess(null)
+
+    try {
+      const res = await fetch('/api/spotify-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId: spotifyClientId,
+          clientSecret: spotifyClientSecret,
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        setSpotifyError(data.error || 'Erro ao salvar credenciais')
+        return
+      }
+
+      setSpotifySuccess('Credenciais salvas com sucesso!')
+      setSpotifyClientSecret('') // Limpa o campo de secret após salvar
+
+      // Recarrega config
+      const configRes = await fetch('/api/spotify-config')
+      if (configRes.ok) {
+        const data = await configRes.json() as { configured: boolean; clientId: string | null; clientSecret: string | null }
+        setSpotifyConfig(data)
+      }
+    } catch (err) {
+      console.error(err)
+      setSpotifyError('Erro ao salvar credenciais')
+    } finally {
+      setSavingSpotify(false)
+    }
+  }
+
+  async function handleClearSpotify() {
+    if (!confirm('Tem certeza que deseja remover as credenciais do Spotify?')) {
+      return
+    }
+
+    setSavingSpotify(true)
+    setSpotifyError(null)
+    setSpotifySuccess(null)
+
+    try {
+      const res = await fetch('/api/spotify-config', { method: 'DELETE' })
+      if (!res.ok) {
+        setSpotifyError('Erro ao remover credenciais')
+        return
+      }
+
+      setSpotifySuccess('Credenciais removidas com sucesso!')
+      setSpotifyClientId('')
+      setSpotifyClientSecret('')
+      setSpotifyConfig(null)
+    } catch (err) {
+      console.error(err)
+      setSpotifyError('Erro ao remover credenciais')
+    } finally {
+      setSavingSpotify(false)
     }
   }
 
@@ -530,7 +628,7 @@ export default function App() {
           </div>
         </header>
 
-        <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+        <div className="grid gap-6 lg:grid-cols-2">
           <div className="rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl p-6 space-y-6 shadow-[0_20px_90px_rgba(0,0,0,0.45)]">
             <div className="grid grid-cols-2 gap-3 text-sm">
               <button
@@ -626,6 +724,92 @@ export default function App() {
                 {saving ? 'Salvando...' : 'Salvar'}
               </button>
             </div>
+          </div>
+
+          {/* Spotify Config Card */}
+          <div className="rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl p-6 space-y-5 shadow-[0_20px_90px_rgba(0,0,0,0.45)]">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.14em] text-neutral-400">Spotify API</p>
+                <h2 className="text-lg font-semibold">Credenciais</h2>
+              </div>
+              {spotifyConfig?.configured && (
+                <span className="rounded-full border border-emerald-400/40 bg-emerald-500/15 px-3 py-1 text-[11px] text-emerald-200">
+                  ✓ Configurado
+                </span>
+              )}
+            </div>
+
+            <form onSubmit={handleSaveSpotify} className="space-y-4">
+              <div className="space-y-1.5">
+                <label htmlFor="spotify-client-id" className="block text-xs text-neutral-400">Client ID</label>
+                <input
+                  id="spotify-client-id"
+                  type="text"
+                  className="w-full rounded-xl border border-neutral-700/80 bg-neutral-900/80 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/70 transition"
+                  value={spotifyClientId}
+                  onChange={(e) => setSpotifyClientId(e.target.value)}
+                  placeholder="Seu Spotify Client ID"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="spotify-client-secret" className="block text-xs text-neutral-400">Client Secret</label>
+                <input
+                  id="spotify-client-secret"
+                  type="password"
+                  className="w-full rounded-xl border border-neutral-700/80 bg-neutral-900/80 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/70 transition font-mono"
+                  value={spotifyClientSecret}
+                  onChange={(e) => setSpotifyClientSecret(e.target.value)}
+                  placeholder={spotifyConfig?.configured ? spotifyConfig.clientSecret || 'Novo secret' : 'Seu Spotify Client Secret'}
+                />
+              </div>
+
+              {spotifyError && (
+                <div className="rounded-xl border border-red-500/40 bg-red-900/40 px-3 py-2 text-xs text-red-100">
+                  {spotifyError}
+                </div>
+              )}
+
+              {spotifySuccess && (
+                <div className="rounded-xl border border-emerald-500/40 bg-emerald-900/40 px-3 py-2 text-xs text-emerald-100">
+                  {spotifySuccess}
+                </div>
+              )}
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="submit"
+                  disabled={savingSpotify || !spotifyClientId || !spotifyClientSecret}
+                  className="flex-1 rounded-xl bg-linear-to-r from-emerald-400 via-emerald-500 to-cyan-500 px-4 py-2.5 text-sm font-semibold text-neutral-900 shadow-lg shadow-emerald-500/25 hover:translate-y-px transition disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {savingSpotify ? 'Salvando...' : spotifyConfig?.configured ? 'Atualizar' : 'Salvar'}
+                </button>
+
+                {spotifyConfig?.configured && (
+                  <button
+                    type="button"
+                    onClick={handleClearSpotify}
+                    disabled={savingSpotify}
+                    className="rounded-xl border border-red-400/40 bg-red-500/15 px-4 py-2.5 text-sm font-semibold text-red-100 hover:bg-red-500/25 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    Limpar
+                  </button>
+                )}
+              </div>
+
+              <p className="text-[11px] text-neutral-500 leading-relaxed">
+                Obtenha suas credenciais em{' '}
+                <a
+                  href="https://developer.spotify.com/dashboard"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-emerald-400 hover:underline"
+                >
+                  Spotify Developer Dashboard
+                </a>
+              </p>
+            </form>
           </div>
 
           <div className="rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl p-6 space-y-4 shadow-[0_20px_90px_rgba(0,0,0,0.45)]">

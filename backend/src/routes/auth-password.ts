@@ -1,21 +1,100 @@
+import { timingSafeEqual } from 'node:crypto'
 import type { FastifyInstance } from 'fastify'
 import { loadConfig } from '../lib/config.js'
 import { upsertUser } from '../lib/db.js'
+
+// Throttle map: IP/username → { attempts, lockUntil }
+const failedAttempts = new Map<
+  string,
+  { attempts: number; lockUntil: number }
+>()
+
+const MAX_ATTEMPTS = 5
+const LOCKOUT_TIME = 5 * 60 * 1000 // 5 minutos
+
+function checkThrottle(key: string): { allowed: true } | { allowed: false; retryAfter: number } {
+  const record = failedAttempts.get(key)
+  if (!record) return { allowed: true }
+
+  const now = Date.now()
+  if (record.lockUntil > now) {
+    return { allowed: false, retryAfter: Math.ceil((record.lockUntil - now) / 1000) }
+  }
+
+  // Lock expirou, reseta
+  failedAttempts.delete(key)
+  return { allowed: true }
+}
+
+function recordFailure(key: string) {
+  const now = Date.now()
+  const record = failedAttempts.get(key) || { attempts: 0, lockUntil: 0 }
+
+  record.attempts += 1
+
+  if (record.attempts >= MAX_ATTEMPTS) {
+    record.lockUntil = now + LOCKOUT_TIME
+    console.warn(`[Auth] Lockout triggered for ${key} after ${record.attempts} attempts`)
+  }
+
+  failedAttempts.set(key, record)
+}
+
+function resetFailures(key: string) {
+  failedAttempts.delete(key)
+}
 
 export async function registerPasswordAuthRoutes(app: FastifyInstance) {
   const env = loadConfig()
 
   if (env.AUTH_PROVIDER !== 'password') return
 
-  app.post('/auth/login', async (request, reply) => {
+  app.post('/login', async (request, reply) => {
     const body = request.body as { username?: string; password?: string }
 
     const username = (body.username || '').trim()
     const password = (body.password || '').trim()
 
-    if (username !== env.ADMIN_USERNAME || password !== env.ADMIN_PASSWORD) {
+    if (!username || !password) {
+      return reply.code(400).send({ error: 'Username and password required' })
+    }
+
+    // Throttle por IP
+    const clientIp = request.ip
+    const throttleKey = `${clientIp}:${username}`
+    const throttle = checkThrottle(throttleKey)
+
+    if (!throttle.allowed) {
+      return reply.code(429).send({
+        error: 'Too many failed attempts',
+        retryAfter: throttle.retryAfter,
+      })
+    }
+
+    // Validar credenciais com comparação de tempo constante
+    const usernameMatch =
+      username.length === env.ADMIN_USERNAME.length &&
+      timingSafeEqual(
+        Buffer.from(username),
+        Buffer.from(env.ADMIN_USERNAME),
+      )
+
+    const passwordMatch =
+      password.length === env.ADMIN_PASSWORD.length &&
+      timingSafeEqual(
+        Buffer.from(password),
+        Buffer.from(env.ADMIN_PASSWORD),
+      )
+
+    if (!usernameMatch || !passwordMatch) {
+      recordFailure(throttleKey)
+      const record = failedAttempts.get(throttleKey)
+      console.warn(`[Auth] Failed login attempt for ${username} from ${clientIp} (${record?.attempts}/${MAX_ATTEMPTS})`)
       return reply.code(401).send({ error: 'Invalid credentials' })
     }
+
+    // Login bem-sucedido: resetar tentativas
+    resetFailures(throttleKey)
 
     // Garante presença do usuário no banco (username único)
     await upsertUser({
@@ -32,11 +111,12 @@ export async function registerPasswordAuthRoutes(app: FastifyInstance) {
         sameSite: 'lax',
         secure: env.NODE_ENV === 'production',
         path: '/',
+        maxAge: 7 * 24 * 60 * 60, // 7 dias
       })
       .send({ ok: true })
   })
 
-  app.post('/auth/logout', async (_req, reply) => {
+  app.post('/logout', async (_req, reply) => {
     reply.clearCookie('session', { path: '/' }).send({ ok: true })
   })
 }

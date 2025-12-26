@@ -4,6 +4,7 @@ import {
   getUserByUsername,
   upsertConfig,
 } from '../lib/db.js'
+import { parseWidgetConfig } from '../lib/validation.js'
 
 export async function registerAdminApi(app: FastifyInstance) {
   // GET /api/config (por-usuário)
@@ -33,20 +34,16 @@ export async function registerAdminApi(app: FastifyInstance) {
     const username = req.username
     if (!username) return reply.code(401).send({ error: 'Not authenticated' })
 
-    const body = req.body as {
-      mode?: 'NOW_PLAYING' | 'FIXED_TRACK'
-      track_id?: string | null
-      theme?: 'dark' | 'light'
+    // Validar input com Zod
+    const validation = parseWidgetConfig(req.body)
+    if (!validation.success) {
+      return reply.code(400).send({ error: validation.error })
     }
 
     const user = await getUserByUsername(username)
     if (!user) return reply.code(404).send({ error: 'User not found' })
 
-    await upsertConfig(user.id, {
-      mode: body.mode ?? 'NOW_PLAYING',
-      trackId: body.track_id ?? null,
-      theme: body.theme ?? 'dark',
-    })
+    await upsertConfig(user.id, validation.data)
 
     return reply.send({ ok: true })
   })

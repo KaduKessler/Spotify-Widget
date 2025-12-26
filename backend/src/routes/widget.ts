@@ -7,6 +7,7 @@ import {
   upsertConfig,
 } from '../lib/db.js'
 import { renderSvg } from '../lib/svg.js'
+import { parseWidgetConfig } from '../lib/validation.js'
 
 export async function registerWidgetRoute(app: FastifyInstance) {
   // Retorna a configuração do widget do usuário autenticado, ou a global
@@ -49,22 +50,16 @@ export async function registerWidgetRoute(app: FastifyInstance) {
       return reply.code(401).send({ error: 'Not authenticated' })
     }
 
-    const body = (req as FastifyRequest).body as {
-      mode?: string
-      track_id?: string | null
-      theme?: string
+    // Validar input com Zod
+    const validation = parseWidgetConfig((req as FastifyRequest).body)
+    if (!validation.success) {
+      return reply.code(400).send({ error: validation.error })
     }
-    const mode = body.mode === 'FIXED_TRACK' ? 'FIXED_TRACK' : 'NOW_PLAYING'
-    const theme = body.theme === 'light' ? 'light' : 'dark'
 
     const user = await getUserByUsername(username)
     if (!user) return reply.code(404).send({ error: 'User not found' })
 
-    await upsertConfig(user.id, {
-      mode: mode as 'NOW_PLAYING' | 'FIXED_TRACK',
-      trackId: body.track_id || null,
-      theme: theme as 'dark' | 'light',
-    })
+    await upsertConfig(user.id, validation.data)
 
     return { ok: true }
   })

@@ -11,7 +11,7 @@ export async function registerGithubAuthRoutes(app: FastifyInstance) {
   const redirectUri = `${env.APP_URL.replace(/\/$/, '')}/auth/github/callback`
 
   // 1) Início do login: redireciona pro GitHub
-  app.get('/auth/github', async (_req, reply) => {
+  app.get('/github', async (_req, reply) => {
     // Gera um `state` aleatório e armazena em cookie assinado (Double Submit Cookie)
     const state = randomBytes(16).toString('hex')
     reply.setCookie('oauth_state', state, {
@@ -33,7 +33,7 @@ export async function registerGithubAuthRoutes(app: FastifyInstance) {
   })
 
   // 2) Callback do GitHub: troca o "code" por access_token, pega user e cria sessão
-  app.get('/auth/github/callback', async (request, reply) => {
+  app.get('/github/callback', async (request, reply) => {
     const { code, state } = request.query as { code?: string; state?: string }
 
     if (!code) {

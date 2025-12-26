@@ -1,5 +1,6 @@
 import path from 'node:path'
 import cookie from '@fastify/cookie'
+import rateLimit from '@fastify/rate-limit'
 import fastifyStatic from '@fastify/static'
 import Fastify from 'fastify'
 import { loadConfig } from './lib/config.js'
@@ -28,9 +29,35 @@ async function bootstrap() {
     },
   })
 
+  // Rate limiting global (mais permissivo)
+  await app.register(rateLimit, {
+    max: 100, // 100 requests
+    timeWindow: '1 minute', // por minuto
+    errorResponseBuilder: () => ({
+      error: 'Too many requests',
+      message: 'Rate limit exceeded. Please try again later.',
+    }),
+  })
+
+  // Rate limiting específico para auth routes (mais restritivo)
+  await app.register(
+    async (authRoutes) => {
+      await authRoutes.register(rateLimit, {
+        max: 10, // 10 requests
+        timeWindow: '5 minutes', // por 5 minutos
+        errorResponseBuilder: () => ({
+          error: 'Too many auth attempts',
+          message: 'Rate limit exceeded. Please try again later.',
+        }),
+      })
+
+      await registerPasswordAuthRoutes(authRoutes)
+      await registerGithubAuthRoutes(authRoutes)
+    },
+    { prefix: '/auth' },
+  )
+
   await registerAuthPlugin(app)
-  await registerPasswordAuthRoutes(app)
-  await registerGithubAuthRoutes(app)
   await registerAuthConfigRoute(app)
   await registerMeRoute(app)
   await registerWidgetRoute(app)

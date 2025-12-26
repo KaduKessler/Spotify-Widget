@@ -15,6 +15,31 @@ type Me = {
 
 type AuthProvider = 'none' | 'password' | 'github'
 
+function LoginShell({
+  hero,
+  children,
+}: {
+  hero: ReactNode
+  children: ReactNode
+}) {
+  return (
+    <div className="relative min-h-screen overflow-hidden bg-neutral-950">
+      <div className="absolute inset-0 bg-linear-to-br from-emerald-500/15 via-cyan-500/12 to-sky-600/18 blur-3xl" />
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -left-24 -top-24 h-64 w-64 rounded-full bg-emerald-400/14 blur-3xl" />
+        <div className="absolute -right-20 top-6 h-72 w-72 rounded-full bg-sky-400/14 blur-3xl" />
+        <div className="absolute left-1/3 bottom-0 h-52 w-52 rounded-full bg-teal-400/12 blur-3xl" />
+      </div>
+      <div className="relative z-10 flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-xl space-y-6">
+          <div className="text-center space-y-2">{hero}</div>
+          {children}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   const [authProviders, setAuthProviders] = useState<AuthProvider[]>([])
   const [me, setMe] = useState<Me | null>(null)
@@ -30,6 +55,7 @@ export default function App() {
   const [loginUsername, setLoginUsername] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
   const [loginLoading, setLoginLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   // 1) Descobre quais providers estão ativos (suporta múltiplos)
   useEffect(() => {
@@ -175,29 +201,6 @@ export default function App() {
     window.location.href = '/auth/github'
   }
 
-  const LoginShell = ({
-    hero,
-    children,
-  }: {
-    hero: ReactNode
-    children: ReactNode
-  }) => (
-    <div className="relative min-h-screen overflow-hidden bg-neutral-950">
-      <div className="absolute inset-0 bg-linear-to-br from-emerald-500/15 via-cyan-500/12 to-sky-600/18 blur-3xl" />
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -left-24 -top-24 h-64 w-64 rounded-full bg-emerald-400/14 blur-3xl" />
-        <div className="absolute -right-20 top-6 h-72 w-72 rounded-full bg-sky-400/14 blur-3xl" />
-        <div className="absolute left-1/3 bottom-0 h-52 w-52 rounded-full bg-teal-400/12 blur-3xl" />
-      </div>
-      <div className="relative z-10 flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-xl space-y-6">
-          <div className="text-center space-y-2">{hero}</div>
-          {children}
-        </div>
-      </div>
-    </div>
-  )
-
   const widgetUrl = `/widget?ts=${previewKey}`
   const backendBase =
     (import.meta.env.VITE_BACKEND_URL as string) || 'http://localhost:3000'
@@ -281,14 +284,31 @@ export default function App() {
 
                   <label className="block text-xs text-neutral-400 space-y-1">
                     <span>Senha</span>
-                    <input
-                      id="password"
-                      type="password"
-                      className="w-full rounded-xl border border-neutral-700/80 bg-neutral-900/80 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/70 transition"
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                      autoComplete="current-password"
-                    />
+                    <div className="relative">
+                      <input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        className="w-full rounded-xl border border-neutral-700/80 bg-neutral-900/80 px-3 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/70 transition"
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        autoComplete="current-password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 transition-colors duration-200"
+                      >
+                        {showPassword ? (
+                          <svg viewBox="0 0 24 24" aria-hidden="true" className="w-4 h-4 fill-current transition-opacity duration-200 opacity-100">
+                            <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
+                          </svg>
+                        ) : (
+                          <svg viewBox="0 0 24 24" aria-hidden="true" className="w-4 h-4 fill-current transition-opacity duration-200 opacity-100">
+                            <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46A11.804 11.804 0 001 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm7.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3-.05 0-.11.01-.17.02z" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
                   </label>
 
                   <button
@@ -369,14 +389,31 @@ export default function App() {
 
               <label className="block text-xs text-neutral-400 space-y-1">
                 <span>Senha</span>
-                <input
-                  id="password"
-                  type="password"
-                  className="w-full rounded-xl border border-neutral-700/80 bg-neutral-900/80 px-3 py-2.75 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/70 transition"
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                  autoComplete="current-password"
-                />
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    className="w-full rounded-xl border border-neutral-700/80 bg-neutral-900/80 px-3 py-2.75 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/70 transition"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 transition-colors duration-200"
+                  >
+                    {showPassword ? (
+                      <svg viewBox="0 0 24 24" aria-hidden="true" className="w-4 h-4 fill-current transition-opacity duration-200 opacity-100">
+                        <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
+                      </svg>
+                    ) : (
+                      <svg viewBox="0 0 24 24" aria-hidden="true" className="w-4 h-4 fill-current transition-opacity duration-200 opacity-100">
+                        <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46A11.804 11.804 0 001 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm7.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3-.05 0-.11.01-.17.02z" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
               </label>
 
               <button

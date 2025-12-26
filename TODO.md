@@ -1,41 +1,253 @@
 
 # TODO
 
-Este arquivo descreve as tarefas necessárias para finalizar e melhorar o projeto, com foco em multi-usuário, segurança, integração com Spotify, refatoração do frontend e outras melhorias.
+Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação e controle granular de acesso.
 
-## Prioridades imediatas
+---
 
-- **Multi-usuário / Widgets por usuário**: criar uma rota de widget por usuário e garantir que cada `userId` tenha sua própria configuração (não compartilhar o mesmo `widget_config` global). Implementar tabela `user_widget_config` com `owner_id` e garantir fallback/compatibilidade com a configuração global existente.
-- **Persistência de usuários**: garantir que a tabela `users` contenha `id`, `provider`, `username`, `avatar_url` e funções `upsertUser` / `getUserById` corretas. Associar configs ao `owner_id` (userId).
-- **Segurança**: revisar sessão/cookies (assinatura, `httpOnly`, `sameSite`, `secure`), validar endpoints, proteção CSRF se necessário, e revisar quem pode alterar configurações do widget.
+## ✅ Fase 1: Foundation (Concluído)
 
-## Integração com Spotify
+### Backend (Fastify + Prisma)
 
-- **Receber `spotify-playing-now`**: permitir que o widget receba updates do estado de reprodução (webhook/POST) e atualize a exibição em tempo real.
-- **Buscar faixas por URL**: implementar utilitário/endpoints para resolver URLs de Spotify e buscar metadados das faixas (título, artista, imagem) para uso no widget.
+- [x] Schema Prisma: `users` (autoincrement id + username único) e `widget_config` (1:1 per user)
+- [x] Multi-usuário: cada userId tem config isolada; endpoint público `/user/:username`
+- [x] Persistência: funções `upsertUser`, `getUserById`, `getUserByUsername`
+- [x] Auth routes: `/auth/github`, `/auth/login`, `/auth/logout`, `/api/me`
+- [x] Cookies: assinados, httpOnly, sameSite=lax, secure em produção
+- [x] OAuth CSRF: `state` parameter no GitHub OAuth com validação constante
+- [x] Admin API: GET/POST `/api/config`, GET/PUT `/api/widget` por usuário
 
-## Frontend (admin)
+### Frontend (React + Vite)
 
-- **Componentizar `App.tsx`**: dividir `admin/src/App.tsx` em componentes reutilizáveis (Header, Auth/Login, Dashboard, WidgetEditor, Preview). Tornar lógica testável e separar hooks/serviços.
-- **Reestilizar**: aplicar um design mais adequado (tema, espaçamento, tipografia, responsividade). Suporte a tema claro/escuro.
+- [x] Session management: `/api/me` retorna user info
+- [x] Auth flow: discover providers → login/signup → dashboard
+- [x] Widget preview: integrado no admin UI
 
-## Qualidade, infra e docs
+### Infra
 
-- **Testes e CI**: adicionar testes essenciais (rotas de autenticação, endpoints críticos), lint/format e configurar pipeline CI (rodar build/test/lint). 
-- **Documentação**: criar e atualizar `README.md` com passos de configuração, variáveis de ambiente (ex.: `SESSION_SECRET`, `GITHUB_*`, `AUTH_PROVIDER`) e fluxo de autenticação. Documentar como criar widgets por usuário.
-- **Observability & Backlog**: planejar acessibilidade, i18n, logs estruturados e monitoramento de erros (Sentry/Outros).
+- [x] Prisma migrations: sistema versionado
+- [x] TypeScript ESM: compilação clean
+- [x] gitignore: consolidado na raiz (node_modules, dist, .env, .prisma, *.sqlite)
+- [x] pnpm-workspace: setup para backend + admin
 
-## Ordem sugerida de trabalho
+---
 
-1. Criar/validar tabela `users` (se necessário) e garantir endpoints de login atualizando `users`.
-2. Criar `user_widget_config` e adaptar rotas que leem/escrevem config para usar `request.userId`.
-3. Revisar plugin `auth` e políticas de cookie/sessão (testar `AUTH_PROVIDER=none`, `password`, `github`).
-4. Implementar endpoint para receber `spotify-playing-now` e utilitário para buscar tracks por URL.
-5. Refatorar `App.tsx` em componentes e aplicar novo estilo.
-6. Adicionar testes, CI e documentação.
+## 🔐 Fase 2: Security Hardening (Concluído ✅)
 
-## Segurança / Notas importantes
+### Rate Limiting & Brute Force Protection
 
-- Tratar `userId` como autoridade para operações por-usuário; validar sempre no backend.
-- Cookies de sessão devem ser assinados e, em produção, `secure: true` e `sameSite` apropriado.
-- Para integração com Spotify, evitar armazenar tokens sensíveis sem necessidade; se armazenar, criptografar/limitar acesso.
+- [x] Registrar `@fastify/rate-limit` no bootstrap
+- [x] Limitar `/auth/github`, `/auth/login`, `/auth/logout` (10 req/5 min por IP)
+- [x] Rate limit global (100 req/min) para outras rotas
+
+### Input Validation
+
+- [x] Validar POST `/api/config` e PUT `/api/widget` (mode, theme, trackId)
+- [x] Helper `validateWidgetConfig` com validação de tipos e tamanhos
+- [x] Rejeitar payloads com campos inesperados
+
+### Password Security
+
+- [x] Comparação constante (timingSafeEqual para evitar timing attacks)
+- [x] Throttle/lockout após 5 falhas (cooldown 5 min por IP/username)
+- [x] Logging de tentativas falhadas no console
+- [x] Cookie com maxAge de 7 dias
+
+### Documentation
+
+- [x] README.md completo: setup, env vars, fluxos de auth, estrutura DB
+- [x] Documentado rate limiting, throttling, cookies, CSRF
+- [x] Guia de deployment e configuração de produção
+
+---
+
+## 🎯 Fase 3: Registration Policies (Alta Prioridade)
+
+### Schema & Config Changes
+
+- [ ] Adicionar campo `spotifyClientId`, `spotifyClientSecret` (encrypted) em `User`
+  - Ou criar modelo `SpotifyConfig` (1:1 com User)
+- [ ] Adicionar env vars para políticas:
+  - `REGISTRATION_POLICY`: `open` | `github_whitelist` | `invite_only` | `closed` (padrão: `open`)
+  - `GITHUB_WHITELIST`: lista de usernames separada por vírgula (se policy=github_whitelist)
+  - `ALLOW_PASSWORD_SIGNUP`: true | false (padrão: true)
+
+### Registration Policy: Open (Baseline)
+
+- [ ] Qualquer um faz signup via password (se enabled) ou GitHub
+- [ ] Validação básica (username único, email válido se necessário)
+- [ ] Envio de confirmação por email (opcional, depois)
+
+### Registration Policy: GitHub Whitelist
+
+- [ ] No fluxo `/auth/github/callback`, validar username contra `GITHUB_WHITELIST`
+- [ ] Se não na whitelist, rejeitar com mensagem apropriada
+- [ ] Desabilitar password signup (redirecionar para GitHub)
+
+### Registration Policy: Invite Tokens
+
+- [ ] Nova rota: `POST /auth/invite/create` (admin only, retorna token)
+- [ ] Nova rota: `POST /auth/invite/redeem/:token` (qualquer um, cria user)
+- [ ] Token: armazenar em tabela `InviteToken` (token, expiresAt, createdBy, usedBy, usedAt)
+- [ ] Validar expiração (ex: 7 dias) e se já foi usado
+- [ ] Após uso, marcar como usado e guardar username que resgatou
+
+### Registration Policy: Closed
+
+- [ ] Admin apenas cria contas manualmente (future work)
+- [ ] Sem rotas de signup públicas
+
+---
+
+## 🎵 Fase 4: Spotify Per-User Integration
+
+### Schema & Storage
+
+- [ ] Adicionar `spotifyClientId`, `spotifyClientSecret` à tabela `User` (ou modelo `SpotifyConfig`)
+- [ ] Opcionalmente: `spotifyRefreshToken`, `spotifyAccessToken`, `spotifyTokenExpiresAt`
+- [ ] **Criptografia**:
+  - Decidir se encrypt secrets (usar `crypto` builtin ou `@noble/ciphers`)
+  - Ou apenas armazenar mascarado (mostrar últimos 4 chars no UI)
+
+### Admin UI
+
+- [ ] Nova seção: "Spotify Settings"
+- [ ] Form: input clientId, input clientSecret (password field)
+- [ ] Botão: "Save Credentials"
+- [ ] Botão: "Clear Credentials" (se já configurado)
+- [ ] Status: "Configured ✓" ou "Not configured"
+
+### Backend Routes
+
+- [ ] `GET /api/spotify-config` (retorna clientId mascarado, se existir)
+- [ ] `POST /api/spotify-config` (valida e salva clientId/Secret)
+- [ ] `DELETE /api/spotify-config` (limpa credenciais do user)
+
+### Widget com Spotify (Future)
+
+- [ ] Usar clientId/Secret do user para fazer requisições à API Spotify
+- [ ] Não usar credenciais globais/hardcoded
+- [ ] Implementar search de tracks, fetch de now playing, etc
+
+---
+
+## 📱 Fase 5: Widget Features
+
+### Spotify Integration
+
+- [ ] Endpoint `POST /api/spotify-now-playing` (webhook/polling)
+  - Recebe update de reprodução, salva em `widget_config.currentTrack`
+- [ ] Endpoint `POST /api/spotify-search` (busca faixas por query)
+  - Usa clientId/Secret do user autenticado
+- [ ] Cache de tracks consultadas (opcional, depois)
+- [ ] Modo `NOW_PLAYING`: atualiza em tempo real (polling ou webhook)
+
+### SVG Widget
+
+- [ ] Gerar SVG dinâmico baseado em `widget_config` (mode, theme, currentTrack)
+- [ ] Suporte a modo `FIXED_TRACK` (mostra track fixa)
+- [ ] Suporte a modo `NOW_PLAYING` (mostra track atual + info Spotify)
+- [ ] Styles: dark/light theme
+- [ ] Endpoint: `GET /widget/:username.svg` (retorna SVG renderizado)
+
+---
+
+## 🎨 Fase 6: Frontend Refactoring
+
+### Code Organization
+
+- [ ] Componentizar `App.tsx`:
+  - `Header.tsx` (logo, user menu, logout)
+  - `AuthForm.tsx` (login/signup com múltiplos providers)
+  - `Dashboard.tsx` (tabs: widget editor, spotify config, preview)
+  - `WidgetEditor.tsx` (form: mode, theme, trackId)
+  - `SpotifyConfig.tsx` (form: clientId, clientSecret)
+  - `Preview.tsx` (mostra widget em tempo real)
+- [ ] Separar serviços/hooks:
+  - `useSession()` → manage user/username
+  - `useAuth()` → login/logout/signup
+  - `useConfig()` → fetch/update widget config
+  - `useSpotify()` → fetch/update Spotify credentials
+
+### Styling & UX
+
+- [ ] Aplicar design melhorado (tema, espaçamento, tipografia)
+- [ ] Suporte tema claro/escuro (persistir em localStorage)
+- [ ] Responsividade mobile
+- [ ] Feedback visual: loading states, error messages, success toasts
+
+---
+
+## 🧪 Fase 7: Testing & Quality
+
+### Unit Tests
+
+- [ ] Routes de auth (login, logout, signup, callback)
+- [ ] Config endpoints (GET/POST/PUT)
+- [ ] Validação de CSRF state
+- [ ] Rate limit behavior
+
+### Integration Tests
+
+- [ ] Fluxo completo: signup → login → config save → preview
+- [ ] Múltiplos users: isolamento de dados
+
+### Code Quality
+
+- [ ] ESLint + Prettier configurados
+- [ ] Type checking strict (tsc --noEmit)
+- [ ] Pre-commit hooks (husky)
+
+---
+
+## 🚀 Fase 8: CI/CD & Deploy
+
+### GitHub Actions
+
+- [ ] Build: tsc + build frontend
+- [ ] Test: rodar suite de testes
+- [ ] Lint: ESLint check
+- [ ] Deploy: staging/prod (após approval)
+
+### Documentation
+
+- [ ] README.md completo
+- [ ] DEPLOYMENT.md (como hospedar self-hosted)
+- [ ] API.md (documentar endpoints)
+- [ ] ARCHITECTURE.md (diagrama de fluxo)
+
+---
+
+## 📚 Extras & Backlog
+
+### Nice to Have
+
+- [ ] Email confirmação (signup validation)
+- [ ] Two-factor authentication (TOTP)
+- [ ] Logs estruturados (structured logging)
+- [ ] Monitoring (Sentry para erros)
+- [ ] Analytics (opcional)
+
+### Accessibility & i18n
+
+- [ ] WCAG 2.1 AA (a11y)
+- [ ] i18n suporte (en, pt-br)
+
+### Advanced Features (Very Future)
+
+- [ ] Widget customization (color picker, font size)
+- [ ] Playlist support (mostrar faixas de playlist)
+- [ ] Multiple widgets por user
+- [ ] Compartilhar config entre users
+- [ ] API pública para integração third-party
+
+---
+
+## 🎯 Priorização Recomendada
+
+1. **Segurança** (Fase 2): rate limit, validação, password hashing
+2. **Políticas de Signup** (Fase 3): open → whitelist → invite → closed
+3. **Spotify Per-User** (Fase 4): credenciais, storage, UI
+4. **Widget Features** (Fase 5): integração real com Spotify
+5. **Frontend** (Fase 6): componentes, UX
+6. **Testes & Infra** (Fase 7-8): automação e deploy

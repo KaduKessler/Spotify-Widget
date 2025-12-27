@@ -1,0 +1,305 @@
+{
+  "info": {
+    "_postman_id": "public-api-collection-003",
+    "name": "03 - Public API",
+    "description": "APIs públicas e autenticadas: widget, config, Spotify",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Checks",
+      "item": [
+        {
+          "name": "Health",
+          "id": "2385a192-27b3-4b5c-9128-92476099be01",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Status básico do servidor"
+          },
+          "response": []
+        },
+        {
+          "name": "Ready",
+          "id": "0762a6d5-b42b-4fed-940a-d2c24c23003a",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ready",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ready"
+              ]
+            },
+            "description": "Readiness check (DB, cache, etc)"
+          },
+          "response": []
+        }
+      ],
+      "id": "1f9b8fba-2161-470b-b915-401ff52f83ab"
+    },
+    {
+      "name": "Widget (Public)",
+      "item": [
+        {
+          "name": "Get Widget SVG",
+          "id": "80370312-2088-4485-8ffb-c6dde2048d02",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/widget?user=:username",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "widget"
+              ],
+              "query": [
+                {
+                  "key": "user",
+                  "value": ":username",
+                  "description": "Username público"
+                }
+              ],
+              "variable": [
+                {
+                  "key": "username",
+                  "value": "admin"
+                }
+              ]
+            },
+            "description": "Retorna SVG do widget (público)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Public JSON",
+          "id": "d7fe1a59-9572-4ad7-87e3-9c2df97b252a",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/user/api/:username",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user",
+                "api",
+                ":username"
+              ],
+              "variable": [
+                {
+                  "key": "username",
+                  "value": "admin"
+                }
+              ]
+            },
+            "description": "JSON com track atual (respeita flag de privacidade)"
+          },
+          "response": []
+        }
+      ],
+      "id": "e5d4d47f-286e-4125-99a0-c255169e01dc"
+    },
+    {
+      "name": "Widget Config (Authenticated)",
+      "item": [
+        {
+          "name": "Get My Config",
+          "id": "d910829c-e794-4714-acd2-91fad521436c",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/config",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "config"
+              ]
+            },
+            "description": "Config do widget do usuário logado"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Config",
+          "id": "8ef4103c-5bbe-4495-95cb-4eb097b5f325",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"NOW_PLAYING\",\n  \"theme\": \"dark\",\n  \"exposeNowPlaying\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/config",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "config"
+              ]
+            },
+            "description": "Atualiza config do widget (mode: NOW_PLAYING ou FIXED_TRACK)"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Config (Fixed Track)",
+          "id": "cdd95d4c-3352-4d4b-830f-25d68a169ffd",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"FIXED_TRACK\",\n  \"trackId\": \"3n3Ppam7vgaVa1iaRUc9Lp\",\n  \"theme\": \"light\",\n  \"exposeNowPlaying\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/config",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "config"
+              ]
+            },
+            "description": "Config com track fixa (trackId ou URL do Spotify)"
+          },
+          "response": []
+        }
+      ],
+      "id": "68c85cf9-4728-455e-a3b3-5aec90f490d2"
+    },
+    {
+      "name": "Spotify Config (Authenticated)",
+      "item": [
+        {
+          "name": "Get Spotify Config",
+          "id": "97f255ce-4e9a-43d7-a3b6-9b1066841cc4",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/spotify-config",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "spotify-config"
+              ]
+            },
+            "description": "Credenciais Spotify do usuário (client_id/secret)"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Spotify Config",
+          "id": "ae814865-4cba-4c63-9eae-cb52a3ab8ba4",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spotifyClientId\": \"your_client_id\",\n  \"spotifyClientSecret\": \"your_client_secret\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/spotify-config",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "spotify-config"
+              ]
+            },
+            "description": "Atualiza credenciais Spotify pessoais"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Spotify Config",
+          "id": "f3a9b020-4bd0-420a-8260-8d90237ae76f",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/spotify-config",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "spotify-config"
+              ]
+            },
+            "description": "Remove credenciais Spotify"
+          },
+          "response": []
+        }
+      ],
+      "id": "40da9c69-087d-4ba3-8893-a464e0cc04f4"
+    },
+    {
+      "name": "Now Playing (Authenticated)",
+      "item": [
+        {
+          "name": "Get Now Playing",
+          "id": "264c22c9-8215-4a81-8c72-4578ee0935d8",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/spotify/now-playing",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "spotify",
+                "now-playing"
+              ]
+            },
+            "description": "Track atual do Spotify (requer OAuth conectado)"
+          },
+          "response": []
+        }
+      ],
+      "id": "561f63d5-8972-45a9-b956-86e8b02f1a01"
+    }
+  ]
+}

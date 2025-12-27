@@ -1,0 +1,300 @@
+{
+  "info": {
+    "_postman_id": "auth-collection-001",
+    "name": "01 - Autenticação",
+    "description": "Endpoints de autenticação: login, logout, OAuth GitHub/Spotify e gerenciamento de sessão",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Config",
+      "item": [
+        {
+          "name": "Get Auth Config",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth-config",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth-config"
+              ]
+            },
+            "description": "Retorna providers disponíveis e política de registro"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Password Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Login successful\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json()).to.have.property('ok', true);",
+                  "});",
+                  "",
+                  "pm.test(\"Session cookie set\", function () {",
+                  "    const cookies = pm.cookies.all();",
+                  "    const sessionCookie = cookies.find(c => c.name === 'session');",
+                  "    pm.expect(sessionCookie).to.exist;",
+                  "    if (sessionCookie) {",
+                  "        pm.environment.set(\"session\", sessionCookie.value);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{testUsername}}\",\n  \"password\": \"{{testPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login com username e password"
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Encerra a sessão atual"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "GitHub OAuth",
+      "item": [
+        {
+          "name": "Initiate GitHub OAuth",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/github",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "github"
+              ]
+            },
+            "description": "Inicia o fluxo OAuth do GitHub. Redireciona para github.com. Use no browser."
+          },
+          "response": []
+        },
+        {
+          "name": "GitHub Callback (Manual Test)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/github/callback?code=EXAMPLE_CODE&state=EXAMPLE_STATE",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "github",
+                "callback"
+              ],
+              "query": [
+                {
+                  "key": "code",
+                  "value": "EXAMPLE_CODE",
+                  "description": "Authorization code do GitHub"
+                },
+                {
+                  "key": "state",
+                  "value": "EXAMPLE_STATE",
+                  "description": "State token para CSRF protection"
+                }
+              ]
+            },
+            "description": "Callback do GitHub OAuth (normalmente chamado automaticamente)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Session",
+      "item": [
+        {
+          "name": "Get Current User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"User has required fields\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json).to.have.property('username');",
+                  "    pm.expect(json).to.have.property('provider');",
+                  "    pm.expect(json).to.have.property('role');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "me"
+              ]
+            },
+            "description": "Retorna informações do usuário logado (requer autenticação)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Spotify OAuth",
+      "item": [
+        {
+          "name": "Connect Spotify",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/spotify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "spotify"
+              ]
+            },
+            "description": "Inicia OAuth do Spotify para Now Playing. Abre no browser."
+          },
+          "response": []
+        },
+        {
+          "name": "Spotify Callback (Manual Test)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/spotify/callback?code=EXAMPLE_CODE",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "spotify",
+                "callback"
+              ],
+              "query": [
+                {
+                  "key": "code",
+                  "value": "EXAMPLE_CODE"
+                }
+              ]
+            },
+            "description": "Callback do Spotify OAuth"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Spotify Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/spotify/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "spotify",
+                "status"
+              ]
+            },
+            "description": "Verifica se Spotify está conectado e válido"
+          },
+          "response": []
+        },
+        {
+          "name": "Disconnect Spotify",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/spotify/disconnect",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "spotify",
+                "disconnect"
+              ]
+            },
+            "description": "Remove tokens do Spotify da conta"
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

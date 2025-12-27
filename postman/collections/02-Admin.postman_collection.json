@@ -1,0 +1,441 @@
+{
+  "info": {
+    "_postman_id": "admin-collection-002",
+    "name": "02 - Admin",
+    "description": "Endpoints administrativos: gerenciamento de usuários e whitelist GitHub (requer role admin)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Users Management",
+      "item": [
+        {
+          "name": "List All Users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Returns users array\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('users');",
+                  "    pm.expect(json.users).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test(\"Users have required fields\", function () {",
+                  "    const json = pm.response.json();",
+                  "    if (json.users.length > 0) {",
+                  "        const user = json.users[0];",
+                  "        pm.expect(user).to.have.property('id');",
+                  "        pm.expect(user).to.have.property('username');",
+                  "        pm.expect(user).to.have.property('role');",
+                  "        pm.expect(user).to.have.property('provider');",
+                  "        pm.expect(user).to.have.property('createdAt');",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users"
+              ]
+            },
+            "description": "Lista todos os usuários do sistema (admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Create User (Password)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"User created successfully\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('ok', true);",
+                  "    pm.expect(json).to.have.property('user');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"testpassword123\",\n  \"role\": \"user\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users"
+              ]
+            },
+            "description": "Cria novo usuário com autenticação por senha (admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Update User Role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"admin\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/:username/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                ":username",
+                "role"
+              ],
+              "variable": [
+                {
+                  "key": "username",
+                  "value": "testuser",
+                  "description": "Username do usuário"
+                }
+              ]
+            },
+            "description": "Atualiza a role de um usuário (admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Reset User Password",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"newpassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/:username/password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                ":username",
+                "password"
+              ],
+              "variable": [
+                {
+                  "key": "username",
+                  "value": "testuser",
+                  "description": "Username do usuário"
+                }
+              ]
+            },
+            "description": "Redefine a senha de um usuário (admin only, apenas para provider=password)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "GitHub Whitelist",
+      "item": [
+        {
+          "name": "List Whitelist",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Returns whitelist array\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('whitelist');",
+                  "    pm.expect(json.whitelist).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test(\"Entries have required fields\", function () {",
+                  "    const json = pm.response.json();",
+                  "    if (json.whitelist.length > 0) {",
+                  "        const entry = json.whitelist[0];",
+                  "        pm.expect(entry).to.have.property('id');",
+                  "        pm.expect(entry).to.have.property('username');",
+                  "        pm.expect(entry).to.have.property('createdAt');",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/whitelist",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "whitelist"
+              ]
+            },
+            "description": "Lista todos os usernames na whitelist GitHub (admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Add to Whitelist",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Username added successfully\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('ok', true);",
+                  "    pm.expect(json).to.have.property('entry');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testgithubuser\",\n  \"note\": \"Adicionado para testes\",\n  \"validateGithub\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/whitelist",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "whitelist"
+              ]
+            },
+            "description": "Adiciona username à whitelist GitHub (admin only). Se validateGithub=true, verifica existência no GitHub."
+          },
+          "response": []
+        },
+        {
+          "name": "Add to Whitelist (with GitHub validation)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"KaduKessler\",\n  \"note\": \"Owner do projeto\",\n  \"validateGithub\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/whitelist",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "whitelist"
+              ]
+            },
+            "description": "Adiciona com validação no GitHub API"
+          },
+          "response": []
+        },
+        {
+          "name": "Remove from Whitelist",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/whitelist/:username",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "whitelist",
+                ":username"
+              ],
+              "variable": [
+                {
+                  "key": "username",
+                  "value": "testgithubuser",
+                  "description": "Username GitHub a remover"
+                }
+              ]
+            },
+            "description": "Remove username da whitelist (soft delete com auditoria) - admin only"
+          },
+          "response": []
+        },
+        {
+          "name": "Batch Import",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usernames\": [\n    \"user1\",\n    \"user2\",\n    \"user3\"\n  ],\n  \"validateGithub\": false,\n  \"skipErrors\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/whitelist/batch",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "whitelist",
+                "batch"
+              ]
+            },
+            "description": "Adiciona múltiplos usernames em lote (máx 100). skipErrors=true continua mesmo com erros."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Validation Helpers",
+      "item": [
+        {
+          "name": "Check if User in Whitelist",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/whitelist/:username",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "whitelist",
+                ":username"
+              ],
+              "variable": [
+                {
+                  "key": "username",
+                  "value": "KaduKessler"
+                }
+              ]
+            },
+            "description": "Verifica se username está na whitelist (público)"
+          },
+          "response": []
+        },
+        {
+          "name": "Validate GitHub Username",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "User-Agent",
+                "value": "Spotify-Readme-Admin"
+              },
+              {
+                "key": "Accept",
+                "value": "application/vnd.github.v3+json"
+              }
+            ],
+            "url": {
+              "raw": "https://api.github.com/users/:username",
+              "protocol": "https",
+              "host": [
+                "api",
+                "github",
+                "com"
+              ],
+              "path": [
+                "users",
+                ":username"
+              ],
+              "variable": [
+                {
+                  "key": "username",
+                  "value": "KaduKessler"
+                }
+              ]
+            },
+            "description": "Valida se username existe no GitHub (GitHub API)"
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

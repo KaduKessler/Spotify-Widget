@@ -5,8 +5,11 @@ import rateLimit from '@fastify/rate-limit'
 import fastifyStatic from '@fastify/static'
 import Fastify from 'fastify'
 import { loadConfig } from './lib/config.js'
+import { importGitHubWhitelistFromEnv } from './lib/db.js'
 import { registerAuthPlugin } from './plugins/auth.js'
 import { registerAdminApi } from './routes/admin.js'
+import { registerAdminUsersRoutes } from './routes/admin-users.js'
+import { registerAdminWhitelistRoutes } from './routes/admin-whitelist.js'
 import { registerAuthConfigRoute } from './routes/auth-config.js'
 import { registerGithubAuthRoutes } from './routes/auth-github.js'
 import { registerPasswordAuthRoutes } from './routes/auth-password.js'
@@ -22,21 +25,22 @@ const env = loadConfig()
 
 async function bootstrap() {
   const app = Fastify({
-    logger: env.NODE_ENV === 'development'
-      ? {
-        level: 'debug',
-        transport: {
-          target: 'pino-pretty',
-          options: {
-            colorize: true,
-            ignore: 'pid,hostname',
-            translateTime: 'HH:MM:ss',
+    logger:
+      env.NODE_ENV === 'development'
+        ? {
+          level: 'debug',
+          transport: {
+            target: 'pino-pretty',
+            options: {
+              colorize: true,
+              ignore: 'pid,hostname',
+              translateTime: 'HH:MM:ss',
+            },
           },
+        }
+        : {
+          level: 'info',
         },
-      }
-      : {
-        level: 'info',
-      },
   })
 
   // Error handler global
@@ -44,15 +48,19 @@ async function bootstrap() {
     const err = error as Error & { statusCode?: number }
     const statusCode = err.statusCode || 500
 
-    app.log.error({
-      err: error,
-      req: { method: request.method, url: request.url },
-    }, 'Request error')
+    app.log.error(
+      {
+        err: error,
+        req: { method: request.method, url: request.url },
+      },
+      'Request error',
+    )
 
     // Não expor detalhes internos em produção
-    const message = statusCode >= 500 && env.NODE_ENV === 'production'
-      ? 'Internal server error'
-      : err.message
+    const message =
+      statusCode >= 500 && env.NODE_ENV === 'production'
+        ? 'Internal server error'
+        : err.message
 
     reply.status(statusCode).send({
       error: err.name || 'Error',
@@ -77,9 +85,7 @@ async function bootstrap() {
 
   // CORS - permitir admin em domínio diferente
   await app.register(cors, {
-    origin: env.NODE_ENV === 'production'
-      ? [env.APP_URL, env.ADMIN_URL]
-      : true, // Em dev, permite qualquer origem
+    origin: env.NODE_ENV === 'production' ? [env.APP_URL, env.ADMIN_URL] : true, // Em dev, permite qualquer origem
     credentials: true, // Permite cookies
   })
 
@@ -131,6 +137,22 @@ async function bootstrap() {
   await spotifyDisconnectRoute(app)
   await registerWidgetRoute(app)
   await registerAdminApi(app)
+  await registerAdminUsersRoutes(app)
+  await registerAdminWhitelistRoutes(app)
+
+  // Importa whitelist do .env para o banco na inicialização
+  if (
+    env.ENABLE_GITHUB_AUTH &&
+    env.GITHUB_WHITELIST &&
+    env.GITHUB_WHITELIST.length > 0
+  ) {
+    const imported = await importGitHubWhitelistFromEnv(env.GITHUB_WHITELIST)
+    if (imported > 0) {
+      app.log.info(
+        `✓ Importados ${imported} usernames do .env para whitelist GitHub`,
+      )
+    }
+  }
 
   // Futuro: servir o admin (quando existir build em ../admin/dist)
   const adminDistPath = path.join(process.cwd(), '..', 'admin', 'dist')

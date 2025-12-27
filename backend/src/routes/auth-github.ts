@@ -1,7 +1,7 @@
 import { randomBytes, timingSafeEqual } from 'node:crypto'
 import type { FastifyInstance } from 'fastify'
 import { loadConfig } from '../lib/config.js'
-import { upsertUser } from '../lib/db.js'
+import { isGitHubWhitelisted, upsertUser } from '../lib/db.js'
 
 export async function registerGithubAuthRoutes(app: FastifyInstance) {
   const env = loadConfig()
@@ -111,16 +111,37 @@ export async function registerGithubAuthRoutes(app: FastifyInstance) {
       avatar_url?: string
     }
 
+    // Políticas de registro
+    if (env.REGISTRATION_POLICY === 'closed') {
+      return reply.code(403).send({ error: 'Registrations are closed' })
+    }
+    if (env.REGISTRATION_POLICY === 'invite_only') {
+      return reply.code(403).send({ error: 'Invite required' })
+    }
+    if (env.REGISTRATION_POLICY === 'github_whitelist') {
+      // Verifica whitelist: primeiro banco, depois .env (para compatibilidade)
+      const inDatabaseWhitelist = await isGitHubWhitelisted(user.login)
+      const inEnvWhitelist = Array.isArray(env.GITHUB_WHITELIST)
+        ? env.GITHUB_WHITELIST.includes(user.login)
+        : false
+
+      if (!inDatabaseWhitelist && !inEnvWhitelist) {
+        return reply.code(403).send({ error: 'Not allowed by GitHub whitelist' })
+      }
+    }
+
     // Garante presença do usuário no banco (username único)
+    const role = (env.ADMIN_USERS || []).includes(user.login) ? 'admin' : 'user'
     await upsertUser({
       provider: 'github',
       username: user.login,
       avatarUrl: user.avatar_url || null,
+      role,
     })
 
     reply
-      // Armazena o username na sessão
-      .setCookie('session', user.login, {
+      // Armazena username e role na sessão
+      .setCookie('session', `${user.login}:${role}`, {
         signed: true,
         httpOnly: true,
         sameSite: 'lax',

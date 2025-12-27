@@ -115,6 +115,7 @@ export async function upsertConfig(
     mode: 'NOW_PLAYING' | 'FIXED_TRACK'
     trackId?: string | null
     theme: 'dark' | 'light'
+    exposeNowPlaying: boolean
   },
 ): Promise<WidgetConfig> {
   return prisma.widgetConfig.upsert({
@@ -123,6 +124,7 @@ export async function upsertConfig(
       mode: data.mode,
       trackId: data.trackId || null,
       theme: data.theme,
+      exposeNowPlaying: data.exposeNowPlaying,
       updatedAt: new Date(),
     },
     create: {
@@ -130,6 +132,7 @@ export async function upsertConfig(
       mode: data.mode,
       trackId: data.trackId || null,
       theme: data.theme,
+      exposeNowPlaying: data.exposeNowPlaying,
     },
   })
 }

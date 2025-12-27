@@ -6,6 +6,7 @@ type Config = {
   mode: 'NOW_PLAYING' | 'FIXED_TRACK'
   track_id: string | null
   theme: 'dark' | 'light'
+  expose_now_playing: boolean
 }
 
 type Me = {
@@ -88,6 +89,7 @@ export default function App() {
   // Feedback de cópia
   const [copiedEmbed, setCopiedEmbed] = useState(false)
   const [copiedUrl, setCopiedUrl] = useState(false)
+  const [showFlagsModal, setShowFlagsModal] = useState(false)
 
   // Avatar do usuário (usa avatar do GitHub quando disponível)
   const userAvatar = me?.provider === 'github' ? `https://github.com/${me.id}.png?size=80` : null
@@ -155,8 +157,18 @@ export default function App() {
       try {
         const res = await fetch('/api/config')
         if (!res.ok) throw new Error('config failed')
-        const data = (await res.json()) as Config
-        setConfig(data)
+        const data = (await res.json()) as Config & {
+          trackId?: string | null
+          exposeNowPlaying?: boolean
+        }
+        // Normaliza snake/camel vindo do backend
+        const normalized: Config = {
+          ...data,
+          track_id: data.track_id ?? data.trackId ?? null,
+          expose_now_playing:
+            data.expose_now_playing ?? data.exposeNowPlaying ?? true,
+        }
+        setConfig(normalized)
       } catch (err) {
         console.error(err)
         setConfigError('Erro ao carregar configuração.')
@@ -213,15 +225,16 @@ export default function App() {
     fetchSpotifyConfig()
   }, [me, fetchNowPlaying])
 
-  async function handleSave() {
-    if (!config) return
+  async function handleSave(nextConfig?: Config) {
+    const cfgToSave = nextConfig ?? config
+    if (!cfgToSave) return
     setSaving(true)
     setConfigError(null)
     try {
       const res = await fetch('/api/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config),
+        body: JSON.stringify(cfgToSave),
       })
       if (!res.ok) throw new Error('save failed')
       setPreviewKey((k) => k + 1)
@@ -436,6 +449,63 @@ export default function App() {
               <p className="text-xs text-neutral-400 mt-1">Escolha a opção mais conveniente para você.</p>
             </div>
 
+              {showFlagsModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+                  <button
+                    type="button"
+                    aria-label="Fechar flags"
+                    className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+                    onClick={() => setShowFlagsModal(false)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setShowFlagsModal(false)
+                      }
+                    }}
+                  />
+                  <div className="relative z-10 w-full max-w-lg rounded-2xl border border-white/10 bg-neutral-950/95 p-6 shadow-2xl">
+                    <div className="flex items-center justify-between gap-3 mb-4">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.18em] text-neutral-400">Flags</p>
+                        <h3 className="text-lg font-semibold text-white">Privacidade e exibição</h3>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowFlagsModal(false)}
+                        className="rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-xs text-neutral-200 hover:border-emerald-400/60"
+                      >
+                        Fechar
+                      </button>
+                    </div>
+
+                    <div className="space-y-4 text-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <p className="font-semibold text-white">Expor dados no JSON público</p>
+                          <p className="text-xs text-neutral-400 leading-relaxed">
+                            Quando ligado, o endpoint /user/api/&lt;usuario&gt; traz Now Playing ou a faixa fixa. Quando desligado, responde 204 (sem conteúdo), ocultando tudo.
+                          </p>
+                        </div>
+                        <label className="inline-flex items-center gap-2 text-xs cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-white/20 bg-white/5"
+                            checked={config.expose_now_playing}
+                            onChange={(e) =>
+                              setConfig({ ...config, expose_now_playing: e.target.checked })
+                            }
+                          />
+                          <span className="text-neutral-200">{config.expose_now_playing ? 'Público' : 'Privado'}</span>
+                        </label>
+                      </div>
+
+                      <div className="rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+                        Lembre-se de clicar em "Salvar" no card principal para aplicar as flags.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             {authError && (
               <div className="rounded-xl border border-red-500/40 bg-red-900/40 px-4 py-3 text-xs text-red-100">
                 {authError}
@@ -685,9 +755,10 @@ export default function App() {
   }
 
   return (
-    <div className="relative min-h-screen bg-neutral-950 text-neutral-50">
-      <div className="absolute inset-0 bg-linear-to-br from-emerald-500/10 via-cyan-500/8 to-sky-600/12 blur-3xl" />
-      <div className="relative z-10 max-w-7xl mx-auto px-4 py-10 space-y-10">
+    <>
+      <div className="relative min-h-screen bg-neutral-950 text-neutral-50">
+        <div className="absolute inset-0 bg-linear-to-br from-emerald-500/10 via-cyan-500/8 to-sky-600/12 blur-3xl" />
+        <div className="relative z-10 max-w-7xl mx-auto px-4 py-10 space-y-10">
         <header className="flex items-center justify-between gap-4">
           <div>
             <p className="text-[11px] uppercase tracking-[0.28em] text-emerald-200/80">
@@ -823,7 +894,14 @@ export default function App() {
                     )}
                     <button
                       type="button"
-                      onClick={handleSave}
+                      onClick={() => setShowFlagsModal(true)}
+                      className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-100 hover:border-emerald-400/60 hover:text-emerald-100 transition"
+                    >
+                      Flags / Privacidade
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSave()}
                       disabled={saving}
                       className="inline-flex items-center gap-2 rounded-xl bg-linear-to-r from-emerald-400 via-emerald-500 to-cyan-500 px-4 py-2 text-sm font-semibold text-neutral-900 shadow-lg shadow-emerald-500/25 hover:translate-y-px transition disabled:opacity-60 disabled:cursor-not-allowed"
                     >
@@ -1074,5 +1152,64 @@ export default function App() {
         </section>
       </div>
     </div>
+
+      {showFlagsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <button
+            type="button"
+            aria-label="Fechar flags"
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setShowFlagsModal(false)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                setShowFlagsModal(false)
+              }
+            }}
+          />
+          <div className="relative z-10 w-full max-w-lg rounded-2xl border border-white/10 bg-neutral-950/95 p-6 shadow-2xl">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.18em] text-neutral-400">Flags</p>
+                <h3 className="text-lg font-semibold text-white">Privacidade e exibição</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowFlagsModal(false)}
+                className="rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-xs text-neutral-200 hover:border-emerald-400/60"
+              >
+                Fechar
+              </button>
+            </div>
+
+            <div className="space-y-4 text-sm">
+              <div className="grid gap-3">
+                <div className="rounded-2xl border border-white/8 bg-white/5 px-4 py-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] items-center">
+                  <div className="space-y-1 leading-tight">
+                    <p className="text-sm font-semibold text-white">Expor dados no JSON público</p>
+                    <p className="text-xs text-neutral-400 leading-relaxed">
+                      Quando ligado, o endpoint /user/api/&lt;usuario&gt; traz Now Playing ou a faixa fixa. Quando desligado, responde 204 (sem conteúdo), ocultando tudo.
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer select-none justify-end">
+                    <input
+                      type="checkbox"
+                      className="peer sr-only"
+                      checked={config.expose_now_playing}
+                      onChange={async (e) => {
+                        const next = { ...config, expose_now_playing: e.target.checked }
+                        setConfig(next)
+                        await handleSave(next)
+                      }}
+                    />
+                    <div className="peer h-6 w-11 rounded-full bg-neutral-500/60 transition-colors duration-300 ease-out peer-checked:bg-emerald-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-white/40 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white" />
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

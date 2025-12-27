@@ -41,6 +41,7 @@ model WidgetConfig {
   mode      String   @default("NOW_PLAYING") // 'NOW_PLAYING' ou 'FIXED_TRACK'
   trackId   String?  @map("track_id") // ID da track fixa (se mode = FIXED_TRACK)
   theme     String   @default("dark") // 'dark' ou 'light'
+  exposeNowPlaying Boolean @default(true) @map("expose_now_playing")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

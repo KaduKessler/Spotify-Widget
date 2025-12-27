@@ -23,6 +23,7 @@ export async function registerAdminApi(app: FastifyInstance) {
         mode: 'NOW_PLAYING',
         trackId: null,
         theme: 'dark',
+        exposeNowPlaying: true,
         createdAt: new Date(),
         updatedAt: new Date(),
       },

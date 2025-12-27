@@ -37,6 +37,7 @@ export async function registerWidgetRoute(app: FastifyInstance) {
             mode: 'NOW_PLAYING',
             trackId: null,
             theme: 'dark',
+            exposeNowPlaying: true,
             createdAt: new Date(),
             updatedAt: new Date(),
           }
@@ -51,6 +52,7 @@ export async function registerWidgetRoute(app: FastifyInstance) {
       mode: 'NOW_PLAYING',
       trackId: null,
       theme: 'dark',
+      exposeNowPlaying: true,
       createdAt: new Date(),
       updatedAt: new Date(),
     }
@@ -83,31 +85,71 @@ export async function registerWidgetRoute(app: FastifyInstance) {
     const username = params.username
     if (!username) return reply.code(400).send({ error: 'Missing username' })
 
+    const env = loadConfig()
+    reply.header('Access-Control-Allow-Origin', env.ADMIN_URL)
+    reply.header('Access-Control-Allow-Methods', 'GET,OPTIONS')
+
     const cfg = (await getConfigByUsername(username)) ?? {
       id: 0,
       userId: 0,
       mode: 'NOW_PLAYING',
       trackId: null,
       theme: 'dark',
+      exposeNowPlaying: true,
       createdAt: new Date(),
       updatedAt: new Date(),
     }
 
-    // por enquanto, o endpoint retorna o track_id salvo (se houver)
+    const user = await getUserByUsername(username)
+
+    // Privacidade: se o usuário optou por não expor, não retorna nada ao público
+    if (!cfg.exposeNowPlaying) {
+      return reply.code(204).send()
+    }
+
+    // Se o modo for NOW_PLAYING e o usuário permitiu exposição, tentar trazer a última/atual música
+    if (user && cfg.mode === 'NOW_PLAYING' && cfg.exposeNowPlaying) {
+      try {
+        const now = await getNowPlayingForUser(user.id, app)
+        if (now) {
+          const source = now.isPlaying ? 'now_playing' : 'recent'
+          return {
+            username,
+            mode: cfg.mode,
+            source,
+            track: {
+              id: now.track.id,
+              name: now.track.name,
+              artists: now.track.artists,
+              album: now.track.album,
+              albumArt: now.track.albumArt,
+              uri: now.track.uri,
+              url: now.track.url,
+              isPlaying: now.isPlaying,
+              lastPlayedAt: now.lastPlayedAt ?? null,
+            },
+            updated_at: Date.now(),
+          }
+        }
+      } catch (err) {
+        app.log.error({ err, username }, 'Failed to fetch now playing for JSON')
+      }
+    }
+
+    // Fallback: usa track fixa se configurada
     const trackId = cfg.trackId || null
-
-    const env = loadConfig()
-    // permitir que o admin no outro host leia esse JSON (CORS controlado)
-    reply.header('Access-Control-Allow-Origin', env.ADMIN_URL)
-    reply.header('Access-Control-Allow-Methods', 'GET,OPTIONS')
-
     const source = trackId ? 'fixed' : null
 
     return {
       username,
       mode: cfg.mode,
       source,
-      track: trackId ? { id: trackId, url: trackId } : null,
+      track: trackId
+        ? {
+            id: trackId,
+            url: trackId,
+          }
+        : null,
       updated_at: Date.now(),
     }
   })

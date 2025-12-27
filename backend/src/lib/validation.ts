@@ -11,6 +11,10 @@ export const WidgetConfigSchema = z.object({
     .optional()
     .transform((val) => val || null),
   theme: z.enum(['dark', 'light']).default('dark'),
+  expose_now_playing: z
+    .boolean()
+    .optional()
+    .transform((val) => (val === undefined ? true : val)),
 })
 
 // Infer TypeScript type from schema
@@ -21,6 +25,7 @@ export interface ValidatedWidgetConfig {
   mode: 'NOW_PLAYING' | 'FIXED_TRACK'
   trackId: string | null
   theme: 'dark' | 'light'
+  exposeNowPlaying: boolean
 }
 
 /**
@@ -44,6 +49,7 @@ export function parseWidgetConfig(
       mode: result.data.mode,
       trackId: result.data.track_id ?? null,
       theme: result.data.theme,
+      exposeNowPlaying: result.data.expose_now_playing ?? true,
     },
   }
 }

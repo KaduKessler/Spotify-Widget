@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 type Config = {
   id: number
@@ -84,6 +84,13 @@ export default function App() {
     lastPlayedAt?: string
   } | null>(null)
   const [loadingNowPlaying, setLoadingNowPlaying] = useState(false)
+
+  // Feedback de cópia
+  const [copiedEmbed, setCopiedEmbed] = useState(false)
+  const [copiedUrl, setCopiedUrl] = useState(false)
+
+  // Avatar do usuário (usa avatar do GitHub quando disponível)
+  const userAvatar = me?.provider === 'github' ? `https://github.com/${me.id}.png?size=80` : null
 
   // 1) Descobre quais providers estão ativos (suporta múltiplos)
   useEffect(() => {
@@ -365,12 +372,21 @@ export default function App() {
     window.location.href = '/auth/github'
   }
 
-  const widgetUrl = me ? `/widget?user=${encodeURIComponent(me.id)}&ts=${previewKey}` : `/widget?ts=${previewKey}`
+  const widgetUrl = me ? `/widget?user=${encodeURIComponent(me.id)}` : `/widget`
   const backendBase =
     (import.meta.env.VITE_BACKEND_URL as string) || 'http://127.0.0.1:3000'
   const jsonUrl = me
     ? `${backendBase}/user/api/${encodeURIComponent(me.id)}`
     : `${backendBase}/user/api/`
+
+  const previewUrl = useMemo(() => {
+    if (typeof window === 'undefined') return widgetUrl
+    try {
+      return new URL(widgetUrl, window.location.origin).toString()
+    } catch {
+      return widgetUrl
+    }
+  }, [widgetUrl])
 
   function handleConnectSpotify() {
     if (!spotifyConfig?.configured) {
@@ -671,7 +687,7 @@ export default function App() {
   return (
     <div className="relative min-h-screen bg-neutral-950 text-neutral-50">
       <div className="absolute inset-0 bg-linear-to-br from-emerald-500/10 via-cyan-500/8 to-sky-600/12 blur-3xl" />
-      <div className="relative z-10 max-w-6xl mx-auto px-4 py-10 space-y-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 py-10 space-y-10">
         <header className="flex items-center justify-between gap-4">
           <div>
             <p className="text-[11px] uppercase tracking-[0.28em] text-emerald-200/80">
@@ -680,6 +696,13 @@ export default function App() {
             <h1 className="text-2xl font-semibold">Spotify Readme</h1>
           </div>
           <div className="flex items-center gap-2">
+            {userAvatar && (
+              <img
+                src={userAvatar}
+                alt={me.id}
+                className="h-8 w-8 rounded-full border border-white/15 bg-neutral-800 object-cover"
+              />
+            )}
             <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-mono text-neutral-100">
               {me.id}
             </span>
@@ -703,307 +726,352 @@ export default function App() {
           </div>
         </header>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div className="rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl p-6 space-y-6 shadow-[0_20px_90px_rgba(0,0,0,0.45)]">
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <button
-                type="button"
-                onClick={() => setConfig({ ...config, mode: 'NOW_PLAYING' })}
-                className={`rounded-2xl border px-3 py-3 text-left transition ${config.mode === 'NOW_PLAYING'
-                  ? 'border-emerald-400/60 bg-emerald-400/10'
-                  : 'border-white/10 bg-white/5 hover:border-white/20'
-                  }`}
-              >
-                <span className="block text-xs uppercase tracking-[0.14em] text-neutral-400">
-                  Modo
-                </span>
-                <span className="block text-base font-semibold">
-                  Now Playing
-                </span>
-              </button>
+        {/* SEÇÃO 1: Config + Preview */}
+        <section className="space-y-3">
+          <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">Configuração</p>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl p-6 space-y-5 shadow-[0_20px_90px_rgba(0,0,0,0.45)] min-w-0">
+              <div>
+                <p className="text-xs uppercase tracking-[0.18em] text-neutral-400">Widget</p>
+                <p className="text-[11px] text-neutral-500">Modo, tema ou track fixa do widget</p>
+              </div>
 
-              <button
-                type="button"
-                onClick={() => setConfig({ ...config, mode: 'FIXED_TRACK' })}
-                className={`rounded-2xl border px-3 py-3 text-left transition ${config.mode === 'FIXED_TRACK'
-                  ? 'border-emerald-400/60 bg-emerald-400/10'
-                  : 'border-white/10 bg-white/5 hover:border-white/20'
-                  }`}
-              >
-                <span className="block text-xs uppercase tracking-[0.14em] text-neutral-400">
-                  Modo
-                </span>
-                <span className="block text-base font-semibold">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <button
+                  type="button"
+                  onClick={() => setConfig({ ...config, mode: 'NOW_PLAYING' })}
+                  className={`rounded-2xl border px-3 py-3 text-left transition ${config.mode === 'NOW_PLAYING'
+                    ? 'border-emerald-400/60 bg-emerald-400/10'
+                    : 'border-white/10 bg-white/5 hover:border-white/20'
+                    }`}
+                >
+                  <span className="block text-xs uppercase tracking-[0.14em] text-neutral-400">
+                    Modo
+                  </span>
+                  <span className="block text-base font-semibold">
+                    Now Playing
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setConfig({ ...config, mode: 'FIXED_TRACK' })}
+                  className={`rounded-2xl border px-3 py-3 text-left transition ${config.mode === 'FIXED_TRACK'
+                    ? 'border-emerald-400/60 bg-emerald-400/10'
+                    : 'border-white/10 bg-white/5 hover:border-white/20'
+                    }`}
+                >
+                  <span className="block text-xs uppercase tracking-[0.14em] text-neutral-400">
+                    Modo
+                  </span>
+                  <span className="block text-base font-semibold">
+                    Track fixa
+                  </span>
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                <label
+                  htmlFor="track_id"
+                  className="text-sm font-semibold text-neutral-100"
+                >
                   Track fixa
-                </span>
-              </button>
-            </div>
+                </label>
+                <input
+                  id="track_id"
+                  type="text"
+                  className="w-full rounded-xl border border-white/10 bg-neutral-900/80 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/70"
+                  placeholder="ID ou URL da música"
+                  value={config.track_id ?? ''}
+                  onChange={(e) =>
+                    setConfig({ ...config, track_id: e.target.value || null })
+                  }
+                />
+              </div>
 
-            <div className="space-y-2">
-              <label
-                htmlFor="track_id"
-                className="text-sm font-semibold text-neutral-100"
-              >
-                Track fixa
-              </label>
-              <input
-                id="track_id"
-                type="text"
-                className="w-full rounded-xl border border-white/10 bg-neutral-900/80 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/70"
-                placeholder="ID ou URL da música"
-                value={config.track_id ?? ''}
-                onChange={(e) =>
-                  setConfig({ ...config, track_id: e.target.value || null })
-                }
-              />
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-sm font-semibold">Tema</p>
-              <div className="inline-flex rounded-xl border border-white/10 bg-white/5 p-1 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setConfig({ ...config, theme: 'dark' })}
-                  className={`px-3 py-1.5 rounded-lg transition ${config.theme === 'dark'
-                    ? 'bg-emerald-500 text-neutral-900'
-                    : 'text-neutral-200 hover:bg-white/10'
-                    }`}
-                >
-                  Dark
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfig({ ...config, theme: 'light' })}
-                  className={`px-3 py-1.5 rounded-lg transition ${config.theme === 'light'
-                    ? 'bg-emerald-500 text-neutral-900'
-                    : 'text-neutral-200 hover:bg-white/10'
-                    }`}
-                >
-                  Light
-                </button>
+              <div className="space-y-2">
+                <p className="text-sm font-semibold">Tema</p>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="inline-flex rounded-xl border border-white/10 bg-white/5 p-1 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setConfig({ ...config, theme: 'dark' })}
+                      className={`px-3 py-1.5 rounded-lg transition ${config.theme === 'dark'
+                        ? 'bg-emerald-500 text-neutral-900'
+                        : 'text-neutral-200 hover:bg-white/10'
+                        }`}
+                    >
+                      Dark
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfig({ ...config, theme: 'light' })}
+                      className={`px-3 py-1.5 rounded-lg transition ${config.theme === 'light'
+                        ? 'bg-emerald-500 text-neutral-900'
+                        : 'text-neutral-200 hover:bg-white/10'
+                        }`}
+                    >
+                      Light
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {configError && (
+                      <span className="text-[11px] text-red-300">
+                        {configError}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleSave}
+                      disabled={saving}
+                      className="inline-flex items-center gap-2 rounded-xl bg-linear-to-r from-emerald-400 via-emerald-500 to-cyan-500 px-4 py-2 text-sm font-semibold text-neutral-900 shadow-lg shadow-emerald-500/25 hover:translate-y-px transition disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {saving ? 'Salvando...' : 'Salvar'}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-3 pt-1">
-              <span
-                className={`text-[11px] ${configError ? 'text-red-300' : 'text-neutral-400'}`}
-              >
-                {configError ? configError : 'Config pronta para salvar'}
-              </span>
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={saving}
-                className="inline-flex items-center gap-2 rounded-xl bg-linear-to-r from-emerald-400 via-emerald-500 to-cyan-500 px-4 py-2 text-sm font-semibold text-neutral-900 shadow-lg shadow-emerald-500/25 hover:translate-y-px transition disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {saving ? 'Salvando...' : 'Salvar'}
-              </button>
+            <div className="rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl p-6 space-y-4 shadow-[0_20px_90px_rgba(0,0,0,0.45)] min-w-0">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.18em] text-neutral-400">Preview</p>
+                  <p className="text-[11px] text-neutral-500">Rota pública para embutir o widget SVG</p>
+                </div>
+                <code className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-neutral-300">
+                  /widget
+                </code>
+              </div>
+              <div className="overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/70">
+                <img
+                  key={previewKey}
+                  src={widgetUrl}
+                  alt="Preview do widget Spotify"
+                  className="w-full"
+                />
+              </div>
+              <div className="flex items-center gap-2 text-[11px] text-neutral-400">
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`<img src="${previewUrl}" />`)
+                    setCopiedEmbed(true)
+                    setTimeout(() => setCopiedEmbed(false), 1400)
+                  }}
+                  className={`max-w-[320px] truncate text-left rounded-lg border px-2 py-1 transition cursor-pointer font-mono ${copiedEmbed ? 'border-emerald-400/70 bg-emerald-500/15 text-emerald-100' : 'border-white/10 bg-white/5 hover:border-emerald-400/60'}`}
+                >
+                  {copiedEmbed ? 'Copiado!' : `<img src="${previewUrl}" />`}
+                </button>
+                <a
+                  href={previewUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="ml-auto rounded-lg border border-white/10 bg-white/5 px-2 py-1 hover:border-emerald-400/60 transition"
+                >
+                  Abrir
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(previewUrl)
+                    setCopiedUrl(true)
+                    setTimeout(() => setCopiedUrl(false), 1400)
+                  }}
+                  className={`rounded-lg border px-2 py-1 transition cursor-pointer ${copiedUrl ? 'border-emerald-400/70 bg-emerald-500/15 text-emerald-100' : 'border-white/10 bg-white/5 hover:border-emerald-400/60'}`}
+                >
+                  {copiedUrl ? 'Copiado!' : 'Copiar URL'}
+                </button>
+              </div>
             </div>
           </div>
+        </section>
 
-          {/* Spotify Config Card */}
-          <div className="rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl p-6 space-y-5 shadow-[0_20px_90px_rgba(0,0,0,0.45)]">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs uppercase tracking-[0.14em] text-neutral-400">Spotify API</p>
-                <h2 className="text-lg font-semibold">Credenciais</h2>
-              </div>
-              {spotifyConfig?.configured && (
-                <span className="rounded-full border border-emerald-400/40 bg-emerald-500/15 px-3 py-1 text-[11px] text-emerald-200">
-                  ✓ Configurado
-                </span>
-              )}
-            </div>
-
-            <form onSubmit={handleSaveSpotify} className="space-y-4">
-              <div className="space-y-1.5">
-                <label htmlFor="spotify-client-id" className="block text-xs text-neutral-400">Client ID</label>
-                <input
-                  id="spotify-client-id"
-                  type="text"
-                  className="w-full rounded-xl border border-neutral-700/80 bg-neutral-900/80 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/70 transition"
-                  value={spotifyClientId}
-                  onChange={(e) => setSpotifyClientId(e.target.value)}
-                  placeholder="Seu Spotify Client ID"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label htmlFor="spotify-client-secret" className="block text-xs text-neutral-400">Client Secret</label>
-                <input
-                  id="spotify-client-secret"
-                  type="password"
-                  className="w-full rounded-xl border border-neutral-700/80 bg-neutral-900/80 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/70 transition font-mono"
-                  value={spotifyClientSecret}
-                  onChange={(e) => setSpotifyClientSecret(e.target.value)}
-                  placeholder={spotifyConfig?.configured ? spotifyConfig.clientSecret || 'Novo secret' : 'Seu Spotify Client Secret'}
-                />
-              </div>
-
-              {spotifyError && (
-                <div className="rounded-xl border border-red-500/40 bg-red-900/40 px-3 py-2 text-xs text-red-100">
-                  {spotifyError}
+        {/* SEÇÃO 2: Spotify + Now Playing */}
+        <section className="space-y-3">
+          <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">Integração Spotify</p>
+          <div className="grid gap-6 lg:grid-cols-2 items-start">
+            <div className="rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl p-6 space-y-5 shadow-[0_20px_90px_rgba(0,0,0,0.45)]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.14em] text-neutral-400">Spotify API</p>
+                  <h2 className="text-lg font-semibold">Credenciais</h2>
                 </div>
-              )}
-
-              {spotifySuccess && (
-                <div className="rounded-xl border border-emerald-500/40 bg-emerald-900/40 px-3 py-2 text-xs text-emerald-100">
-                  {spotifySuccess}
-                </div>
-              )}
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="submit"
-                  disabled={savingSpotify || !spotifyClientId || !spotifyClientSecret}
-                  className="flex-1 rounded-xl bg-linear-to-r from-emerald-400 via-emerald-500 to-cyan-500 px-4 py-2.5 text-sm font-semibold text-neutral-900 shadow-lg shadow-emerald-500/25 hover:translate-y-px transition disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {savingSpotify ? 'Salvando...' : spotifyConfig?.configured ? 'Atualizar' : 'Salvar'}
-                </button>
-
                 {spotifyConfig?.configured && (
-                  <button
-                    type="button"
-                    onClick={handleClearSpotify}
-                    disabled={savingSpotify}
-                    className="rounded-xl border border-red-400/40 bg-red-500/15 px-4 py-2.5 text-sm font-semibold text-red-100 hover:bg-red-500/25 transition disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    Limpar
-                  </button>
+                  <span className="rounded-full border border-emerald-400/40 bg-emerald-500/15 px-3 py-1 text-[11px] text-emerald-200">
+                    ✓ Configurado
+                  </span>
                 )}
               </div>
 
-              <p className="text-[11px] text-neutral-500 leading-relaxed">
-                Obtenha suas credenciais em{' '}
-                <a
-                  href="https://developer.spotify.com/dashboard"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-emerald-400 hover:underline"
-                >
-                  Spotify Developer Dashboard
-                </a>
-              </p>
-            </form>
-
-            {/* Conectar conta do Spotify */}
-            {spotifyConfig?.configured && (
-              <div className="pt-4 border-t border-white/5 space-y-3">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.14em] text-neutral-400 mb-1">Conta do Spotify</p>
-                  <p className="text-sm text-neutral-300">
-                    {spotifyConnected ? 'Conta conectada com sucesso!' : 'Conecte sua conta para usar o modo Now Playing'}
-                  </p>
+              <form onSubmit={handleSaveSpotify} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="spotify-client-id" className="block text-xs text-neutral-400">Client ID</label>
+                  <input
+                    id="spotify-client-id"
+                    type="text"
+                    className="w-full rounded-xl border border-neutral-700/80 bg-neutral-900/80 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/70 transition"
+                    value={spotifyClientId}
+                    onChange={(e) => setSpotifyClientId(e.target.value)}
+                    placeholder="Seu Spotify Client ID"
+                  />
                 </div>
 
-                {spotifyConnected ? (
+                <div className="space-y-1.5">
+                  <label htmlFor="spotify-client-secret" className="block text-xs text-neutral-400">Client Secret</label>
+                  <input
+                    id="spotify-client-secret"
+                    type="password"
+                    className="w-full rounded-xl border border-neutral-700/80 bg-neutral-900/80 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/70 transition font-mono"
+                    value={spotifyClientSecret}
+                    onChange={(e) => setSpotifyClientSecret(e.target.value)}
+                    placeholder={spotifyConfig?.configured ? spotifyConfig.clientSecret || 'Novo secret' : 'Seu Spotify Client Secret'}
+                  />
+                </div>
+
+                {spotifyError && (
+                  <div className="rounded-xl border border-red-500/40 bg-red-900/40 px-3 py-2 text-xs text-red-100">
+                    {spotifyError}
+                  </div>
+                )}
+
+                {spotifySuccess && (
+                  <div className="rounded-xl border border-emerald-500/40 bg-emerald-900/40 px-3 py-2 text-xs text-emerald-100">
+                    {spotifySuccess}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="submit"
+                    disabled={savingSpotify || !spotifyClientId || !spotifyClientSecret}
+                    className="flex-1 rounded-xl bg-linear-to-r from-emerald-400 via-emerald-500 to-cyan-500 px-4 py-2.5 text-sm font-semibold text-neutral-900 shadow-lg shadow-emerald-500/25 hover:translate-y-px transition disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {savingSpotify ? 'Salvando...' : spotifyConfig?.configured ? 'Atualizar' : 'Salvar'}
+                  </button>
+
+                  {spotifyConfig?.configured && (
+                    <button
+                      type="button"
+                      onClick={handleClearSpotify}
+                      disabled={savingSpotify}
+                      className="rounded-xl border border-red-400/40 bg-red-500/15 px-4 py-2.5 text-sm font-semibold text-red-100 hover:bg-red-500/25 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      Limpar
+                    </button>
+                  )}
+                </div>
+
+                <p className="text-[11px] text-neutral-500 leading-relaxed">
+                  Obtenha suas credenciais em{' '}
+                  <a
+                    href="https://developer.spotify.com/dashboard"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-emerald-400 hover:underline"
+                  >
+                    Spotify Developer Dashboard
+                  </a>
+                </p>
+              </form>
+
+              {/* Conectar conta do Spotify */}
+              {spotifyConfig?.configured && (
+                <div className="pt-4 border-t border-white/5 space-y-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.14em] text-neutral-400 mb-1">Conta do Spotify</p>
+                    <p className="text-sm text-neutral-300">
+                      {spotifyConnected ? 'Conta conectada com sucesso!' : 'Conecte sua conta para usar o modo Now Playing'}
+                    </p>
+                  </div>
+
+                  {spotifyConnected ? (
+                    <button
+                      type="button"
+                      onClick={handleDisconnectSpotify}
+                      disabled={loadingSpotifyStatus}
+                      className="w-full rounded-xl border border-red-400/40 bg-red-500/15 px-4 py-2.5 text-sm font-semibold text-red-100 hover:bg-red-500/25 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {loadingSpotifyStatus ? 'Desconectando...' : 'Desconectar Spotify'}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleConnectSpotify}
+                      className="w-full rounded-xl bg-[#1DB954] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1ed760] transition shadow-lg shadow-[#1DB954]/25"
+                    >
+                      Conectar com Spotify
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Now Playing Card */}
+            {spotifyConnected && (
+              <div className="rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl p-6 space-y-4 shadow-[0_20px_90px_rgba(0,0,0,0.45)]">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.14em] text-neutral-400">Spotify</p>
+                    <h2 className="text-lg font-semibold">Now Playing</h2>
+                  </div>
                   <button
                     type="button"
-                    onClick={handleDisconnectSpotify}
-                    disabled={loadingSpotifyStatus}
-                    className="w-full rounded-xl border border-red-400/40 bg-red-500/15 px-4 py-2.5 text-sm font-semibold text-red-100 hover:bg-red-500/25 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                    onClick={fetchNowPlaying}
+                    disabled={loadingNowPlaying}
+                    className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs hover:bg-white/10 transition disabled:opacity-50"
                   >
-                    {loadingSpotifyStatus ? 'Desconectando...' : 'Desconectar Spotify'}
+                    {loadingNowPlaying ? 'Carregando...' : 'Atualizar'}
                   </button>
+                </div>
+
+                {nowPlaying ? (
+                  <div className="space-y-3">
+                    <div className="flex gap-3">
+                      {nowPlaying.track.albumArt && (
+                        <img
+                          src={nowPlaying.track.albumArt}
+                          alt={nowPlaying.track.album}
+                          className="w-16 h-16 rounded-lg shadow-lg"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-white truncate">{nowPlaying.track.name}</p>
+                        <p className="text-sm text-neutral-400 truncate">{nowPlaying.track.artists.join(', ')}</p>
+                        <p className="text-xs text-neutral-500 truncate">{nowPlaying.track.album}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className={`px-2 py-1 rounded-full ${nowPlaying.isPlaying ? 'bg-emerald-500/20 text-emerald-300' : 'bg-neutral-700/50 text-neutral-400'}`}>
+                        {nowPlaying.isPlaying ? '▶ Tocando agora' : '⏸ Última tocada'}
+                      </span>
+                      {nowPlaying.lastPlayedAt && !nowPlaying.isPlaying && (
+                        <span className="text-neutral-500">
+                          {new Date(nowPlaying.lastPlayedAt).toLocaleString('pt-BR')}
+                        </span>
+                      )}
+                    </div>
+
+                    <a
+                      href={nowPlaying.track.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block w-full rounded-xl bg-[#1DB954] px-4 py-2 text-center text-sm font-semibold text-white hover:bg-[#1ed760] transition"
+                    >
+                      Abrir no Spotify
+                    </a>
+                  </div>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={handleConnectSpotify}
-                    className="w-full rounded-xl bg-[#1DB954] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1ed760] transition shadow-lg shadow-[#1DB954]/25"
-                  >
-                    Conectar com Spotify
-                  </button>
+                  <p className="text-sm text-neutral-400">
+                    {loadingNowPlaying ? 'Carregando...' : 'Nenhuma música tocando ou recentemente tocada'}
+                  </p>
                 )}
               </div>
             )}
           </div>
-
-          {/* Now Playing Card */}
-          {spotifyConnected && (
-            <div className="rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl p-6 space-y-4 shadow-[0_20px_90px_rgba(0,0,0,0.45)]">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.14em] text-neutral-400">Spotify</p>
-                  <h2 className="text-lg font-semibold">Now Playing</h2>
-                </div>
-                <button
-                  type="button"
-                  onClick={fetchNowPlaying}
-                  disabled={loadingNowPlaying}
-                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs hover:bg-white/10 transition disabled:opacity-50"
-                >
-                  {loadingNowPlaying ? 'Carregando...' : 'Atualizar'}
-                </button>
-              </div>
-
-              {nowPlaying ? (
-                <div className="space-y-3">
-                  <div className="flex gap-3">
-                    {nowPlaying.track.albumArt && (
-                      <img
-                        src={nowPlaying.track.albumArt}
-                        alt={nowPlaying.track.album}
-                        className="w-16 h-16 rounded-lg shadow-lg"
-                      />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-white truncate">{nowPlaying.track.name}</p>
-                      <p className="text-sm text-neutral-400 truncate">{nowPlaying.track.artists.join(', ')}</p>
-                      <p className="text-xs text-neutral-500 truncate">{nowPlaying.track.album}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className={`px-2 py-1 rounded-full ${nowPlaying.isPlaying ? 'bg-emerald-500/20 text-emerald-300' : 'bg-neutral-700/50 text-neutral-400'}`}>
-                      {nowPlaying.isPlaying ? '▶ Tocando agora' : '⏸ Última tocada'}
-                    </span>
-                    {nowPlaying.lastPlayedAt && !nowPlaying.isPlaying && (
-                      <span className="text-neutral-500">
-                        {new Date(nowPlaying.lastPlayedAt).toLocaleString('pt-BR')}
-                      </span>
-                    )}
-                  </div>
-
-                  <a
-                    href={nowPlaying.track.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block w-full rounded-xl bg-[#1DB954] px-4 py-2 text-center text-sm font-semibold text-white hover:bg-[#1ed760] transition"
-                  >
-                    Abrir no Spotify
-                  </a>
-                </div>
-              ) : (
-                <p className="text-sm text-neutral-400">
-                  {loadingNowPlaying ? 'Carregando...' : 'Nenhuma música tocando ou recentemente tocada'}
-                </p>
-              )}
-            </div>
-          )}
-
-          <div className="rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl p-6 space-y-4 shadow-[0_20px_90px_rgba(0,0,0,0.45)]">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-neutral-200">Preview</span>
-              <code className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-neutral-300">
-                /widget
-              </code>
-            </div>
-            <div className="overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/70">
-              <img
-                key={previewKey}
-                src={widgetUrl}
-                alt="Preview do widget Spotify"
-                className="w-full"
-              />
-            </div>
-            <div className="flex items-center gap-2 text-[11px] text-neutral-400">
-              <span className="rounded-full bg-white/5 px-2 py-1 border border-white/10">
-                Embed
-              </span>
-              <span>&lt;img src="/widget" /&gt;</span>
-            </div>
-          </div>
-        </div>
+        </section>
       </div>
     </div>
   )

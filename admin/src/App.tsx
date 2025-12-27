@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import GitHubWhitelistPanel from './components/GitHubWhitelistPanel'
+import UsersPanel from './components/UsersPanel'
 
 type Config = {
   id: number
@@ -12,9 +14,13 @@ type Config = {
 type Me = {
   id: string
   provider: string
+  username: string
+  avatar_url: string | null
+  role: 'admin' | 'user' | 'viewer'
 }
 
 type AuthProvider = 'none' | 'password' | 'github'
+type RegistrationPolicy = 'open' | 'github_whitelist' | 'invite_only' | 'closed'
 
 function LoginShell({
   hero,
@@ -43,6 +49,8 @@ function LoginShell({
 
 export default function App() {
   const [authProviders, setAuthProviders] = useState<AuthProvider[]>([])
+  const [registrationPolicy, setRegistrationPolicy] =
+    useState<RegistrationPolicy>('open')
   const [me, setMe] = useState<Me | null>(null)
   const [checkingAuth, setCheckingAuth] = useState(true)
   const [authError, setAuthError] = useState<string | null>(null)
@@ -92,7 +100,12 @@ export default function App() {
   const [showFlagsModal, setShowFlagsModal] = useState(false)
 
   // Avatar do usuário (usa avatar do GitHub quando disponível)
-  const userAvatar = me?.provider === 'github' ? `https://github.com/${me.id}.png?size=80` : null
+  const userAvatar =
+    me?.provider === 'github' ? `https://github.com/${me.id}.png?size=80` : null
+
+  // Tabs state
+  type TabId = 'config' | 'users' | 'whitelist'
+  const [activeTab, setActiveTab] = useState<TabId>('config')
 
   // 1) Descobre quais providers estão ativos (suporta múltiplos)
   useEffect(() => {
@@ -101,8 +114,8 @@ export default function App() {
         const res = await fetch('/api/auth-config')
         if (!res.ok) throw new Error('auth-config failed')
         const data = (await res.json()) as
-          | { provider: AuthProvider }
-          | { providers: AuthProvider[] }
+          | { provider: AuthProvider; policy?: RegistrationPolicy }
+          | { providers: AuthProvider[]; policy?: RegistrationPolicy }
 
         // Backward compatibility: se vier provider único
         if ('provider' in data && data.provider) {
@@ -111,6 +124,10 @@ export default function App() {
           setAuthProviders(data.providers)
         } else {
           setAuthProviders([])
+        }
+
+        if ('policy' in data && data.policy) {
+          setRegistrationPolicy(data.policy)
         }
       } catch (err) {
         console.error(err)
@@ -202,7 +219,11 @@ export default function App() {
       try {
         const res = await fetch('/api/spotify-config')
         if (!res.ok) throw new Error('spotify-config failed')
-        const data = await res.json() as { configured: boolean; clientId: string | null; clientSecret: string | null }
+        const data = (await res.json()) as {
+          configured: boolean
+          clientId: string | null
+          clientSecret: string | null
+        }
         setSpotifyConfig(data)
         if (data.clientId) {
           setSpotifyClientId(data.clientId)
@@ -210,7 +231,7 @@ export default function App() {
         // Check if Spotify is connected (has access token)
         const statusRes = await fetch('/api/spotify/status')
         if (statusRes.ok) {
-          const statusData = await statusRes.json() as { connected: boolean }
+          const statusData = (await statusRes.json()) as { connected: boolean }
           setSpotifyConnected(statusData.connected)
 
           // Se conectado, busca now playing
@@ -274,7 +295,11 @@ export default function App() {
       // Recarrega config
       const configRes = await fetch('/api/spotify-config')
       if (configRes.ok) {
-        const data = await configRes.json() as { configured: boolean; clientId: string | null; clientSecret: string | null }
+        const data = (await configRes.json()) as {
+          configured: boolean
+          clientId: string | null
+          clientSecret: string | null
+        }
         setSpotifyConfig(data)
       }
     } catch (err) {
@@ -434,7 +459,9 @@ export default function App() {
               <h1 className="text-3xl font-semibold leading-tight text-white">
                 Spotify Readme Admin
               </h1>
-              <p className="text-sm text-neutral-300">Escolha como entrar para ajustar o widget.</p>
+              <p className="text-sm text-neutral-300">
+                Escolha como entrar para ajustar o widget.
+              </p>
             </>
           }
         >
@@ -446,66 +473,89 @@ export default function App() {
               <h2 className="text-lg font-semibold text-white">
                 Entre no painel
               </h2>
-              <p className="text-xs text-neutral-400 mt-1">Escolha a opção mais conveniente para você.</p>
+              <p className="text-xs text-neutral-400 mt-1">
+                Escolha a opção mais conveniente para você.
+              </p>
             </div>
 
-              {showFlagsModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-                  <button
-                    type="button"
-                    aria-label="Fechar flags"
-                    className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-                    onClick={() => setShowFlagsModal(false)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        setShowFlagsModal(false)
-                      }
-                    }}
-                  />
-                  <div className="relative z-10 w-full max-w-lg rounded-2xl border border-white/10 bg-neutral-950/95 p-6 shadow-2xl">
-                    <div className="flex items-center justify-between gap-3 mb-4">
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.18em] text-neutral-400">Flags</p>
-                        <h3 className="text-lg font-semibold text-white">Privacidade e exibição</h3>
+            {showFlagsModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+                <button
+                  type="button"
+                  aria-label="Fechar flags"
+                  className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+                  onClick={() => setShowFlagsModal(false)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      setShowFlagsModal(false)
+                    }
+                  }}
+                />
+                <div className="relative z-10 w-full max-w-lg rounded-2xl border border-white/10 bg-neutral-950/95 p-6 shadow-2xl">
+                  <div className="flex items-center justify-between gap-3 mb-4">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.18em] text-neutral-400">
+                        Flags
+                      </p>
+                      <h3 className="text-lg font-semibold text-white">
+                        Privacidade e exibição
+                      </h3>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowFlagsModal(false)}
+                      className="rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-xs text-neutral-200 hover:border-emerald-400/60"
+                    >
+                      Fechar
+                    </button>
+                  </div>
+
+                  <div className="space-y-4 text-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <p className="font-semibold text-white">
+                          Expor dados no JSON público
+                        </p>
+                        <p className="text-xs text-neutral-400 leading-relaxed">
+                          Quando ligado, o endpoint /user/api/&lt;usuario&gt;
+                          traz Now Playing ou a faixa fixa. Quando desligado,
+                          responde 204 (sem conteúdo), ocultando tudo.
+                        </p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setShowFlagsModal(false)}
-                        className="rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-xs text-neutral-200 hover:border-emerald-400/60"
-                      >
-                        Fechar
-                      </button>
+                      <label className="inline-flex items-center gap-2 text-xs cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-white/20 bg-white/5"
+                          checked={config?.expose_now_playing ?? false}
+                          onChange={(e) =>
+                            setConfig((prev) =>
+                              prev
+                                ? {
+                                  ...prev,
+                                  expose_now_playing: e.target.checked,
+                                }
+                                : prev,
+                            )
+                          }
+                          disabled={!config}
+                        />
+                        <span className="text-neutral-200">
+                          {(config?.expose_now_playing ?? false)
+                            ? 'Público'
+                            : 'Privado'}
+                        </span>
+                      </label>
                     </div>
 
-                    <div className="space-y-4 text-sm">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-1">
-                          <p className="font-semibold text-white">Expor dados no JSON público</p>
-                          <p className="text-xs text-neutral-400 leading-relaxed">
-                            Quando ligado, o endpoint /user/api/&lt;usuario&gt; traz Now Playing ou a faixa fixa. Quando desligado, responde 204 (sem conteúdo), ocultando tudo.
-                          </p>
-                        </div>
-                        <label className="inline-flex items-center gap-2 text-xs cursor-pointer select-none">
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4 rounded border-white/20 bg-white/5"
-                            checked={config.expose_now_playing}
-                            onChange={(e) =>
-                              setConfig({ ...config, expose_now_playing: e.target.checked })
-                            }
-                          />
-                          <span className="text-neutral-200">{config.expose_now_playing ? 'Público' : 'Privado'}</span>
-                        </label>
-                      </div>
-
-                      <div className="rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
-                        Lembre-se de clicar em "Salvar" no card principal para aplicar as flags.
-                      </div>
+                    <div className="rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+                      Lembre-se de clicar em "Salvar" no card principal para
+                      aplicar as flags.
                     </div>
                   </div>
                 </div>
-              )}
+              </div>
+            )}
             {authError && (
               <div className="rounded-xl border border-red-500/40 bg-red-900/40 px-4 py-3 text-xs text-red-100">
                 {authError}
@@ -516,8 +566,12 @@ export default function App() {
               <div className="fade-in-up rounded-2xl border border-white/5 bg-neutral-900/80 p-5 shadow-sm space-y-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs font-semibold text-neutral-100">Com usuário e senha</p>
-                    <p className="text-[11px] text-neutral-500">Credenciais locais do servidor.</p>
+                    <p className="text-xs font-semibold text-neutral-100">
+                      Com usuário e senha
+                    </p>
+                    <p className="text-[11px] text-neutral-500">
+                      Credenciais locais do servidor.
+                    </p>
                   </div>
                   <div className="h-10 w-10 rounded-full bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center">
                     <svg
@@ -558,11 +612,19 @@ export default function App() {
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 transition-colors duration-200"
                       >
                         {showPassword ? (
-                          <svg viewBox="0 0 24 24" aria-hidden="true" className="w-4 h-4 fill-current transition-opacity duration-200 opacity-100">
+                          <svg
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            className="w-4 h-4 fill-current transition-opacity duration-200 opacity-100"
+                          >
                             <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
                           </svg>
                         ) : (
-                          <svg viewBox="0 0 24 24" aria-hidden="true" className="w-4 h-4 fill-current transition-opacity duration-200 opacity-100">
+                          <svg
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            className="w-4 h-4 fill-current transition-opacity duration-200 opacity-100"
+                          >
                             <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46A11.804 11.804 0 001 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm7.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3-.05 0-.11.01-.17.02z" />
                           </svg>
                         )}
@@ -583,8 +645,12 @@ export default function App() {
               <div className="fade-in-up rounded-2xl border border-white/5 bg-linear-to-br from-neutral-900/90 via-neutral-900/80 to-neutral-800/80 p-5 shadow-sm space-y-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs font-semibold text-neutral-100">Com GitHub</p>
-                    <p className="text-[11px] text-neutral-500">OAuth seguro e verificado.</p>
+                    <p className="text-xs font-semibold text-neutral-100">
+                      Com GitHub
+                    </p>
+                    <p className="text-[11px] text-neutral-500">
+                      OAuth seguro e verificado.
+                    </p>
                   </div>
                   <div className="h-10 w-10 rounded-full bg-neutral-800 border border-white/10 flex items-center justify-center">
                     <svg
@@ -618,14 +684,20 @@ export default function App() {
               <h1 className="text-3xl font-semibold text-white">
                 Entrar com usuário e senha
               </h1>
-              <p className="text-sm text-neutral-300">Use as credenciais definidas no backend.</p>
+              <p className="text-sm text-neutral-300">
+                Use as credenciais definidas no backend.
+              </p>
             </>
           }
         >
           <div className="fade-in-up rounded-3xl border border-white/6 bg-neutral-900/75 backdrop-blur-xl shadow-[0_20px_90px_rgba(0,0,0,0.5)] p-8 space-y-6">
             <div>
-              <p className="text-xs font-semibold text-neutral-100">Credenciais locais</p>
-              <p className="text-[11px] text-neutral-400 mt-1">Use o usuário e senha configurados no servidor.</p>
+              <p className="text-xs font-semibold text-neutral-100">
+                Credenciais locais
+              </p>
+              <p className="text-[11px] text-neutral-400 mt-1">
+                Use o usuário e senha configurados no servidor.
+              </p>
             </div>
 
             {authError && (
@@ -663,11 +735,19 @@ export default function App() {
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 transition-colors duration-200"
                   >
                     {showPassword ? (
-                      <svg viewBox="0 0 24 24" aria-hidden="true" className="w-4 h-4 fill-current transition-opacity duration-200 opacity-100">
+                      <svg
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                        className="w-4 h-4 fill-current transition-opacity duration-200 opacity-100"
+                      >
                         <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
                       </svg>
                     ) : (
-                      <svg viewBox="0 0 24 24" aria-hidden="true" className="w-4 h-4 fill-current transition-opacity duration-200 opacity-100">
+                      <svg
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                        className="w-4 h-4 fill-current transition-opacity duration-200 opacity-100"
+                      >
                         <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46A11.804 11.804 0 001 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm7.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3-.05 0-.11.01-.17.02z" />
                       </svg>
                     )}
@@ -693,15 +773,23 @@ export default function App() {
         <LoginShell
           hero={
             <>
-              <h1 className="text-3xl font-semibold text-white">Entrar com GitHub</h1>
-              <p className="text-sm text-neutral-300">Conecte via OAuth para acessar o painel.</p>
+              <h1 className="text-3xl font-semibold text-white">
+                Entrar com GitHub
+              </h1>
+              <p className="text-sm text-neutral-300">
+                Conecte via OAuth para acessar o painel.
+              </p>
             </>
           }
         >
           <div className="fade-in-up rounded-3xl border border-white/6 bg-neutral-900/75 backdrop-blur-xl shadow-[0_20px_90px_rgba(0,0,0,0.5)] p-8 space-y-6">
             <div>
-              <p className="text-xs font-semibold text-neutral-100">Autenticação com GitHub</p>
-              <p className="text-[11px] text-neutral-400 mt-1">Conecte com sua conta do GitHub via OAuth.</p>
+              <p className="text-xs font-semibold text-neutral-100">
+                Autenticação com GitHub
+              </p>
+              <p className="text-[11px] text-neutral-400 mt-1">
+                Conecte com sua conta do GitHub via OAuth.
+              </p>
             </div>
 
             {authError && (
@@ -759,399 +847,547 @@ export default function App() {
       <div className="relative min-h-screen bg-neutral-950 text-neutral-50">
         <div className="absolute inset-0 bg-linear-to-br from-emerald-500/10 via-cyan-500/8 to-sky-600/12 blur-3xl" />
         <div className="relative z-10 max-w-7xl mx-auto px-4 py-10 space-y-10">
-        <header className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.28em] text-emerald-200/80">
-              Dashboard
-            </p>
-            <h1 className="text-2xl font-semibold">Spotify Readme</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            {userAvatar && (
-              <img
-                src={userAvatar}
-                alt={me.id}
-                className="h-8 w-8 rounded-full border border-white/15 bg-neutral-800 object-cover"
-              />
-            )}
-            <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-mono text-neutral-100">
-              {me.id}
-            </span>
-            <a
-              href={jsonUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-neutral-100 hover:border-emerald-400/50"
-            >
-              JSON
-            </a>
-            {!hasNone && (
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="rounded-full border border-red-400/40 bg-red-500/15 px-3 py-1 text-[11px] text-red-100 hover:bg-red-500/25"
+          <header className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.28em] text-emerald-200/80">
+                Dashboard
+              </p>
+              <h1 className="text-2xl font-semibold">Spotify Readme</h1>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-2 py-1">
+                {userAvatar && (
+                  <img
+                    src={userAvatar}
+                    alt={me.username}
+                    className="h-7 w-7 rounded-full border border-white/15 bg-neutral-800 object-cover"
+                  />
+                )}
+                <span className="text-xs font-mono text-neutral-100">
+                  {me.username}
+                </span>
+                <span
+                  className={`text-[10px] font-semibold uppercase rounded px-1.5 py-0.5 ${me.role === 'admin' ? 'bg-red-500/20 text-red-300' : me.role === 'user' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-sky-500/20 text-sky-300'}`}
+                >
+                  {me.role}
+                </span>
+              </div>
+              <a
+                href={jsonUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-neutral-100 hover:border-emerald-400/50"
               >
-                Sair
-              </button>
-            )}
-          </div>
-        </header>
-
-        {/* SEÇÃO 1: Config + Preview */}
-        <section className="space-y-3">
-          <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">Configuração</p>
-          <div className="grid gap-6 lg:grid-cols-2">
-            <div className="rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl p-6 space-y-5 shadow-[0_20px_90px_rgba(0,0,0,0.45)] min-w-0">
-              <div>
-                <p className="text-xs uppercase tracking-[0.18em] text-neutral-400">Widget</p>
-                <p className="text-[11px] text-neutral-500">Modo, tema ou track fixa do widget</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 text-sm">
+                JSON
+              </a>
+              {/* Badge de política de registro ao lado do JSON */}
+              {(() => {
+                const label =
+                  registrationPolicy === 'open'
+                    ? 'Aberta'
+                    : registrationPolicy === 'github_whitelist'
+                      ? 'Whitelist GitHub'
+                      : registrationPolicy === 'invite_only'
+                        ? 'Somente Convite'
+                        : 'Fechada'
+                return (
+                  <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] text-neutral-100">
+                    Política: {label}
+                  </span>
+                )
+              })()}
+              {!hasNone && (
                 <button
                   type="button"
-                  onClick={() => setConfig({ ...config, mode: 'NOW_PLAYING' })}
-                  className={`rounded-2xl border px-3 py-3 text-left transition ${config.mode === 'NOW_PLAYING'
-                    ? 'border-emerald-400/60 bg-emerald-400/10'
-                    : 'border-white/10 bg-white/5 hover:border-white/20'
-                    }`}
+                  onClick={handleLogout}
+                  className="rounded-full border border-red-400/40 bg-red-500/15 px-3 py-1 text-[11px] text-red-100 hover:bg-red-500/25"
                 >
-                  <span className="block text-xs uppercase tracking-[0.14em] text-neutral-400">
-                    Modo
-                  </span>
-                  <span className="block text-base font-semibold">
-                    Now Playing
-                  </span>
+                  Sair
                 </button>
-
-                <button
-                  type="button"
-                  onClick={() => setConfig({ ...config, mode: 'FIXED_TRACK' })}
-                  className={`rounded-2xl border px-3 py-3 text-left transition ${config.mode === 'FIXED_TRACK'
-                    ? 'border-emerald-400/60 bg-emerald-400/10'
-                    : 'border-white/10 bg-white/5 hover:border-white/20'
-                    }`}
-                >
-                  <span className="block text-xs uppercase tracking-[0.14em] text-neutral-400">
-                    Modo
-                  </span>
-                  <span className="block text-base font-semibold">
-                    Track fixa
-                  </span>
-                </button>
-              </div>
-
-              <div className="space-y-2">
-                <label
-                  htmlFor="track_id"
-                  className="text-sm font-semibold text-neutral-100"
-                >
-                  Track fixa
-                </label>
-                <input
-                  id="track_id"
-                  type="text"
-                  className="w-full rounded-xl border border-white/10 bg-neutral-900/80 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/70"
-                  placeholder="ID ou URL da música"
-                  value={config.track_id ?? ''}
-                  onChange={(e) =>
-                    setConfig({ ...config, track_id: e.target.value || null })
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-sm font-semibold">Tema</p>
-                <div className="flex items-center justify-between gap-3">
-                  <div className="inline-flex rounded-xl border border-white/10 bg-white/5 p-1 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setConfig({ ...config, theme: 'dark' })}
-                      className={`px-3 py-1.5 rounded-lg transition ${config.theme === 'dark'
-                        ? 'bg-emerald-500 text-neutral-900'
-                        : 'text-neutral-200 hover:bg-white/10'
-                        }`}
-                    >
-                      Dark
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setConfig({ ...config, theme: 'light' })}
-                      className={`px-3 py-1.5 rounded-lg transition ${config.theme === 'light'
-                        ? 'bg-emerald-500 text-neutral-900'
-                        : 'text-neutral-200 hover:bg-white/10'
-                        }`}
-                    >
-                      Light
-                    </button>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    {configError && (
-                      <span className="text-[11px] text-red-300">
-                        {configError}
-                      </span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setShowFlagsModal(true)}
-                      className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-100 hover:border-emerald-400/60 hover:text-emerald-100 transition"
-                    >
-                      Flags / Privacidade
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleSave()}
-                      disabled={saving}
-                      className="inline-flex items-center gap-2 rounded-xl bg-linear-to-r from-emerald-400 via-emerald-500 to-cyan-500 px-4 py-2 text-sm font-semibold text-neutral-900 shadow-lg shadow-emerald-500/25 hover:translate-y-px transition disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      {saving ? 'Salvando...' : 'Salvar'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl p-6 space-y-4 shadow-[0_20px_90px_rgba(0,0,0,0.45)] min-w-0">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.18em] text-neutral-400">Preview</p>
-                  <p className="text-[11px] text-neutral-500">Rota pública para embutir o widget SVG</p>
-                </div>
-                <code className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-neutral-300">
-                  /widget
-                </code>
-              </div>
-              <div className="overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/70">
-                <img
-                  key={previewKey}
-                  src={widgetUrl}
-                  alt="Preview do widget Spotify"
-                  className="w-full"
-                />
-              </div>
-              <div className="flex items-center gap-2 text-[11px] text-neutral-400">
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(`<img src="${previewUrl}" />`)
-                    setCopiedEmbed(true)
-                    setTimeout(() => setCopiedEmbed(false), 1400)
-                  }}
-                  className={`max-w-[320px] truncate text-left rounded-lg border px-2 py-1 transition cursor-pointer font-mono ${copiedEmbed ? 'border-emerald-400/70 bg-emerald-500/15 text-emerald-100' : 'border-white/10 bg-white/5 hover:border-emerald-400/60'}`}
-                >
-                  {copiedEmbed ? 'Copiado!' : `<img src="${previewUrl}" />`}
-                </button>
-                <a
-                  href={previewUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="ml-auto rounded-lg border border-white/10 bg-white/5 px-2 py-1 hover:border-emerald-400/60 transition"
-                >
-                  Abrir
-                </a>
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(previewUrl)
-                    setCopiedUrl(true)
-                    setTimeout(() => setCopiedUrl(false), 1400)
-                  }}
-                  className={`rounded-lg border px-2 py-1 transition cursor-pointer ${copiedUrl ? 'border-emerald-400/70 bg-emerald-500/15 text-emerald-100' : 'border-white/10 bg-white/5 hover:border-emerald-400/60'}`}
-                >
-                  {copiedUrl ? 'Copiado!' : 'Copiar URL'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* SEÇÃO 2: Spotify + Now Playing */}
-        <section className="space-y-3">
-          <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">Integração Spotify</p>
-          <div className="grid gap-6 lg:grid-cols-2 items-start">
-            <div className="rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl p-6 space-y-5 shadow-[0_20px_90px_rgba(0,0,0,0.45)]">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.14em] text-neutral-400">Spotify API</p>
-                  <h2 className="text-lg font-semibold">Credenciais</h2>
-                </div>
-                {spotifyConfig?.configured && (
-                  <span className="rounded-full border border-emerald-400/40 bg-emerald-500/15 px-3 py-1 text-[11px] text-emerald-200">
-                    ✓ Configurado
-                  </span>
-                )}
-              </div>
-
-              <form onSubmit={handleSaveSpotify} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label htmlFor="spotify-client-id" className="block text-xs text-neutral-400">Client ID</label>
-                  <input
-                    id="spotify-client-id"
-                    type="text"
-                    className="w-full rounded-xl border border-neutral-700/80 bg-neutral-900/80 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/70 transition"
-                    value={spotifyClientId}
-                    onChange={(e) => setSpotifyClientId(e.target.value)}
-                    placeholder="Seu Spotify Client ID"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label htmlFor="spotify-client-secret" className="block text-xs text-neutral-400">Client Secret</label>
-                  <input
-                    id="spotify-client-secret"
-                    type="password"
-                    className="w-full rounded-xl border border-neutral-700/80 bg-neutral-900/80 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/70 transition font-mono"
-                    value={spotifyClientSecret}
-                    onChange={(e) => setSpotifyClientSecret(e.target.value)}
-                    placeholder={spotifyConfig?.configured ? spotifyConfig.clientSecret || 'Novo secret' : 'Seu Spotify Client Secret'}
-                  />
-                </div>
-
-                {spotifyError && (
-                  <div className="rounded-xl border border-red-500/40 bg-red-900/40 px-3 py-2 text-xs text-red-100">
-                    {spotifyError}
-                  </div>
-                )}
-
-                {spotifySuccess && (
-                  <div className="rounded-xl border border-emerald-500/40 bg-emerald-900/40 px-3 py-2 text-xs text-emerald-100">
-                    {spotifySuccess}
-                  </div>
-                )}
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="submit"
-                    disabled={savingSpotify || !spotifyClientId || !spotifyClientSecret}
-                    className="flex-1 rounded-xl bg-linear-to-r from-emerald-400 via-emerald-500 to-cyan-500 px-4 py-2.5 text-sm font-semibold text-neutral-900 shadow-lg shadow-emerald-500/25 hover:translate-y-px transition disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    {savingSpotify ? 'Salvando...' : spotifyConfig?.configured ? 'Atualizar' : 'Salvar'}
-                  </button>
-
-                  {spotifyConfig?.configured && (
-                    <button
-                      type="button"
-                      onClick={handleClearSpotify}
-                      disabled={savingSpotify}
-                      className="rounded-xl border border-red-400/40 bg-red-500/15 px-4 py-2.5 text-sm font-semibold text-red-100 hover:bg-red-500/25 transition disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      Limpar
-                    </button>
-                  )}
-                </div>
-
-                <p className="text-[11px] text-neutral-500 leading-relaxed">
-                  Obtenha suas credenciais em{' '}
-                  <a
-                    href="https://developer.spotify.com/dashboard"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-emerald-400 hover:underline"
-                  >
-                    Spotify Developer Dashboard
-                  </a>
-                </p>
-              </form>
-
-              {/* Conectar conta do Spotify */}
-              {spotifyConfig?.configured && (
-                <div className="pt-4 border-t border-white/5 space-y-3">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.14em] text-neutral-400 mb-1">Conta do Spotify</p>
-                    <p className="text-sm text-neutral-300">
-                      {spotifyConnected ? 'Conta conectada com sucesso!' : 'Conecte sua conta para usar o modo Now Playing'}
-                    </p>
-                  </div>
-
-                  {spotifyConnected ? (
-                    <button
-                      type="button"
-                      onClick={handleDisconnectSpotify}
-                      disabled={loadingSpotifyStatus}
-                      className="w-full rounded-xl border border-red-400/40 bg-red-500/15 px-4 py-2.5 text-sm font-semibold text-red-100 hover:bg-red-500/25 transition disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      {loadingSpotifyStatus ? 'Desconectando...' : 'Desconectar Spotify'}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleConnectSpotify}
-                      className="w-full rounded-xl bg-[#1DB954] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1ed760] transition shadow-lg shadow-[#1DB954]/25"
-                    >
-                      Conectar com Spotify
-                    </button>
-                  )}
-                </div>
               )}
             </div>
+          </header>
 
-            {/* Now Playing Card */}
-            {spotifyConnected && (
-              <div className="rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl p-6 space-y-4 shadow-[0_20px_90px_rgba(0,0,0,0.45)]">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.14em] text-neutral-400">Spotify</p>
-                    <h2 className="text-lg font-semibold">Now Playing</h2>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={fetchNowPlaying}
-                    disabled={loadingNowPlaying}
-                    className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs hover:bg-white/10 transition disabled:opacity-50"
-                  >
-                    {loadingNowPlaying ? 'Carregando...' : 'Atualizar'}
-                  </button>
-                </div>
+          {/* Navigation Tabs */}
+          <nav className="flex gap-2 border-b border-white/10 pb-0">
+            <button
+              type="button"
+              onClick={() => setActiveTab('config')}
+              className={`px-4 py-2 text-sm font-semibold rounded-t-lg transition ${activeTab === 'config'
+                  ? 'bg-white/5 border-b-2 border-emerald-400 text-white'
+                  : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/5'
+                }`}
+            >
+              Configuração
+            </button>
+            {me.role === 'admin' && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('users')}
+                  className={`px-4 py-2 text-sm font-semibold rounded-t-lg transition ${activeTab === 'users'
+                      ? 'bg-white/5 border-b-2 border-emerald-400 text-white'
+                      : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/5'
+                    }`}
+                >
+                  Usuários
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('whitelist')}
+                  className={`px-4 py-2 text-sm font-semibold rounded-t-lg transition ${activeTab === 'whitelist'
+                      ? 'bg-white/5 border-b-2 border-emerald-400 text-white'
+                      : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/5'
+                    }`}
+                >
+                  Whitelist GitHub
+                </button>
+              </>
+            )}
+          </nav>
 
-                {nowPlaying ? (
-                  <div className="space-y-3">
-                    <div className="flex gap-3">
-                      {nowPlaying.track.albumArt && (
-                        <img
-                          src={nowPlaying.track.albumArt}
-                          alt={nowPlaying.track.album}
-                          className="w-16 h-16 rounded-lg shadow-lg"
-                        />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-white truncate">{nowPlaying.track.name}</p>
-                        <p className="text-sm text-neutral-400 truncate">{nowPlaying.track.artists.join(', ')}</p>
-                        <p className="text-xs text-neutral-500 truncate">{nowPlaying.track.album}</p>
-                      </div>
+          {/* Tab Content */}
+          {activeTab === 'users' && me.role === 'admin' && <UsersPanel />}
+
+          {activeTab === 'whitelist' && me.role === 'admin' && (
+            <GitHubWhitelistPanel />
+          )}
+
+          {activeTab === 'config' && (
+            <>
+              {/* SEÇÃO 1: Config + Preview */}
+              <section className="space-y-3">
+                <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">
+                  Configuração
+                </p>
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <div className="rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl p-6 space-y-5 shadow-[0_20px_90px_rgba(0,0,0,0.45)] min-w-0">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.18em] text-neutral-400">
+                        Widget
+                      </p>
+                      <p className="text-[11px] text-neutral-500">
+                        Modo, tema ou track fixa do widget
+                      </p>
                     </div>
 
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className={`px-2 py-1 rounded-full ${nowPlaying.isPlaying ? 'bg-emerald-500/20 text-emerald-300' : 'bg-neutral-700/50 text-neutral-400'}`}>
-                        {nowPlaying.isPlaying ? '▶ Tocando agora' : '⏸ Última tocada'}
-                      </span>
-                      {nowPlaying.lastPlayedAt && !nowPlaying.isPlaying && (
-                        <span className="text-neutral-500">
-                          {new Date(nowPlaying.lastPlayedAt).toLocaleString('pt-BR')}
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setConfig({ ...config, mode: 'NOW_PLAYING' })
+                        }
+                        className={`rounded-2xl border px-3 py-3 text-left transition ${config.mode === 'NOW_PLAYING'
+                            ? 'border-emerald-400/60 bg-emerald-400/10'
+                            : 'border-white/10 bg-white/5 hover:border-white/20'
+                          }`}
+                      >
+                        <span className="block text-xs uppercase tracking-[0.14em] text-neutral-400">
+                          Modo
+                        </span>
+                        <span className="block text-base font-semibold">
+                          Now Playing
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setConfig({ ...config, mode: 'FIXED_TRACK' })
+                        }
+                        className={`rounded-2xl border px-3 py-3 text-left transition ${config.mode === 'FIXED_TRACK'
+                            ? 'border-emerald-400/60 bg-emerald-400/10'
+                            : 'border-white/10 bg-white/5 hover:border-white/20'
+                          }`}
+                      >
+                        <span className="block text-xs uppercase tracking-[0.14em] text-neutral-400">
+                          Modo
+                        </span>
+                        <span className="block text-base font-semibold">
+                          Track fixa
+                        </span>
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="track_id"
+                        className="text-sm font-semibold text-neutral-100"
+                      >
+                        Track fixa
+                      </label>
+                      <input
+                        id="track_id"
+                        type="text"
+                        className="w-full rounded-xl border border-white/10 bg-neutral-900/80 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/70"
+                        placeholder="ID ou URL da música"
+                        value={config.track_id ?? ''}
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            track_id: e.target.value || null,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold">Tema</p>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="inline-flex rounded-xl border border-white/10 bg-white/5 p-1 text-xs">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setConfig({ ...config, theme: 'dark' })
+                            }
+                            className={`px-3 py-1.5 rounded-lg transition ${config.theme === 'dark'
+                                ? 'bg-emerald-500 text-neutral-900'
+                                : 'text-neutral-200 hover:bg-white/10'
+                              }`}
+                          >
+                            Dark
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setConfig({ ...config, theme: 'light' })
+                            }
+                            className={`px-3 py-1.5 rounded-lg transition ${config.theme === 'light'
+                                ? 'bg-emerald-500 text-neutral-900'
+                                : 'text-neutral-200 hover:bg-white/10'
+                              }`}
+                          >
+                            Light
+                          </button>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {configError && (
+                            <span className="text-[11px] text-red-300">
+                              {configError}
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setShowFlagsModal(true)}
+                            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-100 hover:border-emerald-400/60 hover:text-emerald-100 transition"
+                          >
+                            Flags / Privacidade
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSave()}
+                            disabled={saving}
+                            className="inline-flex items-center gap-2 rounded-xl bg-linear-to-r from-emerald-400 via-emerald-500 to-cyan-500 px-4 py-2 text-sm font-semibold text-neutral-900 shadow-lg shadow-emerald-500/25 hover:translate-y-px transition disabled:opacity-60 disabled:cursor-not-allowed"
+                          >
+                            {saving ? 'Salvando...' : 'Salvar'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl p-6 space-y-4 shadow-[0_20px_90px_rgba(0,0,0,0.45)] min-w-0">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.18em] text-neutral-400">
+                          Preview
+                        </p>
+                        <p className="text-[11px] text-neutral-500">
+                          Rota pública para embutir o widget SVG
+                        </p>
+                      </div>
+                      <code className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-neutral-300">
+                        /widget
+                      </code>
+                    </div>
+                    <div className="overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/70">
+                      <img
+                        key={previewKey}
+                        src={widgetUrl}
+                        alt="Preview do widget Spotify"
+                        className="w-full"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px] text-neutral-400">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            `<img src="${previewUrl}" />`,
+                          )
+                          setCopiedEmbed(true)
+                          setTimeout(() => setCopiedEmbed(false), 1400)
+                        }}
+                        className={`max-w-[320px] truncate text-left rounded-lg border px-2 py-1 transition cursor-pointer font-mono ${copiedEmbed ? 'border-emerald-400/70 bg-emerald-500/15 text-emerald-100' : 'border-white/10 bg-white/5 hover:border-emerald-400/60'}`}
+                      >
+                        {copiedEmbed
+                          ? 'Copiado!'
+                          : `<img src="${previewUrl}" />`}
+                      </button>
+                      <a
+                        href={previewUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="ml-auto rounded-lg border border-white/10 bg-white/5 px-2 py-1 hover:border-emerald-400/60 transition"
+                      >
+                        Abrir
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(previewUrl)
+                          setCopiedUrl(true)
+                          setTimeout(() => setCopiedUrl(false), 1400)
+                        }}
+                        className={`rounded-lg border px-2 py-1 transition cursor-pointer ${copiedUrl ? 'border-emerald-400/70 bg-emerald-500/15 text-emerald-100' : 'border-white/10 bg-white/5 hover:border-emerald-400/60'}`}
+                      >
+                        {copiedUrl ? 'Copiado!' : 'Copiar URL'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* SEÇÃO 2: Spotify + Now Playing */}
+              <section className="space-y-3">
+                <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">
+                  Integração Spotify
+                </p>
+                <div className="grid gap-6 lg:grid-cols-2 items-start">
+                  <div className="rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl p-6 space-y-5 shadow-[0_20px_90px_rgba(0,0,0,0.45)]">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.14em] text-neutral-400">
+                          Spotify API
+                        </p>
+                        <h2 className="text-lg font-semibold">Credenciais</h2>
+                      </div>
+                      {spotifyConfig?.configured && (
+                        <span className="rounded-full border border-emerald-400/40 bg-emerald-500/15 px-3 py-1 text-[11px] text-emerald-200">
+                          ✓ Configurado
                         </span>
                       )}
                     </div>
 
-                    <a
-                      href={nowPlaying.track.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="block w-full rounded-xl bg-[#1DB954] px-4 py-2 text-center text-sm font-semibold text-white hover:bg-[#1ed760] transition"
-                    >
-                      Abrir no Spotify
-                    </a>
+                    <form onSubmit={handleSaveSpotify} className="space-y-4">
+                      <div className="space-y-1.5">
+                        <label
+                          htmlFor="spotify-client-id"
+                          className="block text-xs text-neutral-400"
+                        >
+                          Client ID
+                        </label>
+                        <input
+                          id="spotify-client-id"
+                          type="text"
+                          className="w-full rounded-xl border border-neutral-700/80 bg-neutral-900/80 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/70 transition"
+                          value={spotifyClientId}
+                          onChange={(e) => setSpotifyClientId(e.target.value)}
+                          placeholder="Seu Spotify Client ID"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label
+                          htmlFor="spotify-client-secret"
+                          className="block text-xs text-neutral-400"
+                        >
+                          Client Secret
+                        </label>
+                        <input
+                          id="spotify-client-secret"
+                          type="password"
+                          className="w-full rounded-xl border border-neutral-700/80 bg-neutral-900/80 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/70 transition font-mono"
+                          value={spotifyClientSecret}
+                          onChange={(e) =>
+                            setSpotifyClientSecret(e.target.value)
+                          }
+                          placeholder={
+                            spotifyConfig?.configured
+                              ? spotifyConfig.clientSecret || 'Novo secret'
+                              : 'Seu Spotify Client Secret'
+                          }
+                        />
+                      </div>
+
+                      {spotifyError && (
+                        <div className="rounded-xl border border-red-500/40 bg-red-900/40 px-3 py-2 text-xs text-red-100">
+                          {spotifyError}
+                        </div>
+                      )}
+
+                      {spotifySuccess && (
+                        <div className="rounded-xl border border-emerald-500/40 bg-emerald-900/40 px-3 py-2 text-xs text-emerald-100">
+                          {spotifySuccess}
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="submit"
+                          disabled={
+                            savingSpotify ||
+                            !spotifyClientId ||
+                            !spotifyClientSecret
+                          }
+                          className="flex-1 rounded-xl bg-linear-to-r from-emerald-400 via-emerald-500 to-cyan-500 px-4 py-2.5 text-sm font-semibold text-neutral-900 shadow-lg shadow-emerald-500/25 hover:translate-y-px transition disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {savingSpotify
+                            ? 'Salvando...'
+                            : spotifyConfig?.configured
+                              ? 'Atualizar'
+                              : 'Salvar'}
+                        </button>
+
+                        {spotifyConfig?.configured && (
+                          <button
+                            type="button"
+                            onClick={handleClearSpotify}
+                            disabled={savingSpotify}
+                            className="rounded-xl border border-red-400/40 bg-red-500/15 px-4 py-2.5 text-sm font-semibold text-red-100 hover:bg-red-500/25 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                          >
+                            Limpar
+                          </button>
+                        )}
+                      </div>
+
+                      <p className="text-[11px] text-neutral-500 leading-relaxed">
+                        Obtenha suas credenciais em{' '}
+                        <a
+                          href="https://developer.spotify.com/dashboard"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-emerald-400 hover:underline"
+                        >
+                          Spotify Developer Dashboard
+                        </a>
+                      </p>
+                    </form>
+
+                    {/* Conectar conta do Spotify */}
+                    {spotifyConfig?.configured && (
+                      <div className="pt-4 border-t border-white/5 space-y-3">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.14em] text-neutral-400 mb-1">
+                            Conta do Spotify
+                          </p>
+                          <p className="text-sm text-neutral-300">
+                            {spotifyConnected
+                              ? 'Conta conectada com sucesso!'
+                              : 'Conecte sua conta para usar o modo Now Playing'}
+                          </p>
+                        </div>
+
+                        {spotifyConnected ? (
+                          <button
+                            type="button"
+                            onClick={handleDisconnectSpotify}
+                            disabled={loadingSpotifyStatus}
+                            className="w-full rounded-xl border border-red-400/40 bg-red-500/15 px-4 py-2.5 text-sm font-semibold text-red-100 hover:bg-red-500/25 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                          >
+                            {loadingSpotifyStatus
+                              ? 'Desconectando...'
+                              : 'Desconectar Spotify'}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={handleConnectSpotify}
+                            className="w-full rounded-xl bg-[#1DB954] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1ed760] transition shadow-lg shadow-[#1DB954]/25"
+                          >
+                            Conectar com Spotify
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <p className="text-sm text-neutral-400">
-                    {loadingNowPlaying ? 'Carregando...' : 'Nenhuma música tocando ou recentemente tocada'}
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-        </section>
+
+                  {/* Now Playing Card */}
+                  {spotifyConnected && (
+                    <div className="rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl p-6 space-y-4 shadow-[0_20px_90px_rgba(0,0,0,0.45)]">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.14em] text-neutral-400">
+                            Spotify
+                          </p>
+                          <h2 className="text-lg font-semibold">Now Playing</h2>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={fetchNowPlaying}
+                          disabled={loadingNowPlaying}
+                          className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs hover:bg-white/10 transition disabled:opacity-50"
+                        >
+                          {loadingNowPlaying ? 'Carregando...' : 'Atualizar'}
+                        </button>
+                      </div>
+
+                      {nowPlaying ? (
+                        <div className="space-y-3">
+                          <div className="flex gap-3">
+                            {nowPlaying.track.albumArt && (
+                              <img
+                                src={nowPlaying.track.albumArt}
+                                alt={nowPlaying.track.album}
+                                className="w-16 h-16 rounded-lg shadow-lg"
+                              />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-white truncate">
+                                {nowPlaying.track.name}
+                              </p>
+                              <p className="text-sm text-neutral-400 truncate">
+                                {nowPlaying.track.artists.join(', ')}
+                              </p>
+                              <p className="text-xs text-neutral-500 truncate">
+                                {nowPlaying.track.album}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 text-xs">
+                            <span
+                              className={`px-2 py-1 rounded-full ${nowPlaying.isPlaying ? 'bg-emerald-500/20 text-emerald-300' : 'bg-neutral-700/50 text-neutral-400'}`}
+                            >
+                              {nowPlaying.isPlaying
+                                ? '▶ Tocando agora'
+                                : '⏸ Última tocada'}
+                            </span>
+                            {nowPlaying.lastPlayedAt &&
+                              !nowPlaying.isPlaying && (
+                                <span className="text-neutral-500">
+                                  {new Date(
+                                    nowPlaying.lastPlayedAt,
+                                  ).toLocaleString('pt-BR')}
+                                </span>
+                              )}
+                          </div>
+
+                          <a
+                            href={nowPlaying.track.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block w-full rounded-xl bg-[#1DB954] px-4 py-2 text-center text-sm font-semibold text-white hover:bg-[#1ed760] transition"
+                          >
+                            Abrir no Spotify
+                          </a>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-neutral-400">
+                          {loadingNowPlaying
+                            ? 'Carregando...'
+                            : 'Nenhuma música tocando ou recentemente tocada'}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </section>
+            </>
+          )}
+        </div>
       </div>
-    </div>
 
       {showFlagsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
@@ -1170,8 +1406,12 @@ export default function App() {
           <div className="relative z-10 w-full max-w-lg rounded-2xl border border-white/10 bg-neutral-950/95 p-6 shadow-2xl">
             <div className="flex items-center justify-between gap-3 mb-4">
               <div>
-                <p className="text-xs uppercase tracking-[0.18em] text-neutral-400">Flags</p>
-                <h3 className="text-lg font-semibold text-white">Privacidade e exibição</h3>
+                <p className="text-xs uppercase tracking-[0.18em] text-neutral-400">
+                  Flags
+                </p>
+                <h3 className="text-lg font-semibold text-white">
+                  Privacidade e exibição
+                </h3>
               </div>
               <button
                 type="button"
@@ -1186,20 +1426,31 @@ export default function App() {
               <div className="grid gap-3">
                 <div className="rounded-2xl border border-white/8 bg-white/5 px-4 py-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] items-center">
                   <div className="space-y-1 leading-tight">
-                    <p className="text-sm font-semibold text-white">Expor dados no JSON público</p>
+                    <p className="text-sm font-semibold text-white">
+                      Expor dados no JSON público
+                    </p>
                     <p className="text-xs text-neutral-400 leading-relaxed">
-                      Quando ligado, o endpoint /user/api/&lt;usuario&gt; traz Now Playing ou a faixa fixa. Quando desligado, responde 204 (sem conteúdo), ocultando tudo.
+                      Quando ligado, o endpoint /user/api/&lt;usuario&gt; traz
+                      Now Playing ou a faixa fixa. Quando desligado, responde
+                      204 (sem conteúdo), ocultando tudo.
                     </p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer select-none justify-end">
                     <input
                       type="checkbox"
                       className="peer sr-only"
-                      checked={config.expose_now_playing}
-                      onChange={async (e) => {
-                        const next = { ...config, expose_now_playing: e.target.checked }
-                        setConfig(next)
-                        await handleSave(next)
+                      checked={config?.expose_now_playing ?? false}
+                      onChange={(e) => {
+                        setConfig((prev) => {
+                          if (!prev) return prev
+                          const next = {
+                            ...prev,
+                            expose_now_playing: e.target.checked,
+                          }
+                          // salva automaticamente
+                          void handleSave(next)
+                          return next
+                        })
                       }}
                     />
                     <div className="peer h-6 w-11 rounded-full bg-neutral-500/60 transition-colors duration-300 ease-out peer-checked:bg-emerald-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-white/40 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white" />

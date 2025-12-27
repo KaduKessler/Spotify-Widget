@@ -68,6 +68,8 @@ export default function App() {
   const [savingSpotify, setSavingSpotify] = useState(false)
   const [spotifyError, setSpotifyError] = useState<string | null>(null)
   const [spotifySuccess, setSpotifySuccess] = useState<string | null>(null)
+  const [spotifyConnected, setSpotifyConnected] = useState(false)
+  const [loadingSpotifyStatus, setLoadingSpotifyStatus] = useState(false)
 
   // 1) Descobre quais providers estão ativos (suporta múltiplos)
   useEffect(() => {
@@ -156,6 +158,12 @@ export default function App() {
         if (data.clientId) {
           setSpotifyClientId(data.clientId)
         }
+        // Check if Spotify is connected (has access token)
+        const statusRes = await fetch('/api/spotify/status')
+        if (statusRes.ok) {
+          const statusData = await statusRes.json() as { connected: boolean }
+          setSpotifyConnected(statusData.connected)
+        }
       } catch (err) {
         console.error(err)
       }
@@ -242,11 +250,34 @@ export default function App() {
       setSpotifyClientId('')
       setSpotifyClientSecret('')
       setSpotifyConfig(null)
+      setSpotifyConnected(false)
     } catch (err) {
       console.error(err)
       setSpotifyError('Erro ao remover credenciais')
     } finally {
       setSavingSpotify(false)
+    }
+  }
+
+  async function handleDisconnectSpotify() {
+    if (!confirm('Tem certeza que deseja desconectar sua conta do Spotify?')) {
+      return
+    }
+
+    setLoadingSpotifyStatus(true)
+    try {
+      const res = await fetch('/api/spotify/disconnect', { method: 'POST' })
+      if (!res.ok) {
+        setSpotifyError('Erro ao desconectar conta do Spotify')
+        return
+      }
+      setSpotifyConnected(false)
+      setSpotifySuccess('Conta do Spotify desconectada!')
+    } catch (err) {
+      console.error(err)
+      setSpotifyError('Erro ao desconectar')
+    } finally {
+      setLoadingSpotifyStatus(false)
     }
   }
 
@@ -301,10 +332,19 @@ export default function App() {
 
   const widgetUrl = `/widget?ts=${previewKey}`
   const backendBase =
-    (import.meta.env.VITE_BACKEND_URL as string) || 'http://localhost:3000'
+    (import.meta.env.VITE_BACKEND_URL as string) || 'http://127.0.0.1:3000'
   const jsonUrl = me
     ? `${backendBase}/user/api/${encodeURIComponent(me.id)}`
     : `${backendBase}/user/api/`
+
+  function handleConnectSpotify() {
+    if (!spotifyConfig?.configured) {
+      setSpotifyError('Configure suas credenciais do Spotify primeiro')
+      return
+    }
+    // Redireciona para o fluxo OAuth (usando URL relativa para passar pelo proxy do Vite)
+    window.location.href = '/auth/spotify'
+  }
 
   const hasPassword = authProviders.includes('password')
   const hasGithub = authProviders.includes('github')
@@ -810,6 +850,37 @@ export default function App() {
                 </a>
               </p>
             </form>
+
+            {/* Conectar conta do Spotify */}
+            {spotifyConfig?.configured && (
+              <div className="pt-4 border-t border-white/5 space-y-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.14em] text-neutral-400 mb-1">Conta do Spotify</p>
+                  <p className="text-sm text-neutral-300">
+                    {spotifyConnected ? 'Conta conectada com sucesso!' : 'Conecte sua conta para usar o modo Now Playing'}
+                  </p>
+                </div>
+
+                {spotifyConnected ? (
+                  <button
+                    type="button"
+                    onClick={handleDisconnectSpotify}
+                    disabled={loadingSpotifyStatus}
+                    className="w-full rounded-xl border border-red-400/40 bg-red-500/15 px-4 py-2.5 text-sm font-semibold text-red-100 hover:bg-red-500/25 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {loadingSpotifyStatus ? 'Desconectando...' : 'Desconectar Spotify'}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleConnectSpotify}
+                    className="w-full rounded-xl bg-[#1DB954] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1ed760] transition shadow-lg shadow-[#1DB954]/25"
+                  >
+                    Conectar com Spotify
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl p-6 space-y-4 shadow-[0_20px_90px_rgba(0,0,0,0.45)]">

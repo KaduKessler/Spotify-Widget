@@ -10,9 +10,13 @@ import { registerAdminApi } from './routes/admin.js'
 import { registerAuthConfigRoute } from './routes/auth-config.js'
 import { registerGithubAuthRoutes } from './routes/auth-github.js'
 import { registerPasswordAuthRoutes } from './routes/auth-password.js'
+import { registerSpotifyAuthRoutes } from './routes/auth-spotify.js'
 import { registerMeRoute } from './routes/me.js'
 import { registerSpotifyConfigRoutes } from './routes/spotify-config.js'
-import { registerWidgetRoute } from './routes/widget'
+import spotifyDisconnectRoute from './routes/spotify-disconnect.js'
+import { registerSpotifyNowPlayingRoutes } from './routes/spotify-now-playing.js'
+import spotifyStatusRoute from './routes/spotify-status.js'
+import { registerWidgetRoute } from './routes/widget.js'
 
 const env = loadConfig()
 
@@ -120,7 +124,11 @@ async function bootstrap() {
   await registerAuthPlugin(app)
   await registerAuthConfigRoute(app)
   await registerMeRoute(app)
+  await registerSpotifyAuthRoutes(app)
   await registerSpotifyConfigRoutes(app)
+  await registerSpotifyNowPlayingRoutes(app)
+  await spotifyStatusRoute(app)
+  await spotifyDisconnectRoute(app)
   await registerWidgetRoute(app)
   await registerAdminApi(app)
 

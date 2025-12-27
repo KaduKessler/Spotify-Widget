@@ -21,6 +21,11 @@ model User {
   spotifyClientId     String? @map("spotify_client_id")
   spotifyClientSecret String? @map("spotify_client_secret")
   
+  // Spotify OAuth tokens (for fetching now playing)
+  spotifyAccessToken    String?   @map("spotify_access_token")
+  spotifyRefreshToken   String?   @map("spotify_refresh_token")
+  spotifyTokenExpiresAt DateTime? @map("spotify_token_expires_at")
+  
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

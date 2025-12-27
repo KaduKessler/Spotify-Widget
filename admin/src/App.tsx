@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 type Config = {
   id: number
@@ -70,6 +70,20 @@ export default function App() {
   const [spotifySuccess, setSpotifySuccess] = useState<string | null>(null)
   const [spotifyConnected, setSpotifyConnected] = useState(false)
   const [loadingSpotifyStatus, setLoadingSpotifyStatus] = useState(false)
+
+  // Now Playing states
+  const [nowPlaying, setNowPlaying] = useState<{
+    isPlaying: boolean
+    track: {
+      name: string
+      artists: string[]
+      album: string
+      albumArt: string | null
+      url: string
+    }
+    lastPlayedAt?: string
+  } | null>(null)
+  const [loadingNowPlaying, setLoadingNowPlaying] = useState(false)
 
   // 1) Descobre quais providers estão ativos (suporta múltiplos)
   useEffect(() => {
@@ -146,6 +160,22 @@ export default function App() {
     fetchConfig()
   }, [me])
 
+  // Fetch now playing - memoized callback
+  const fetchNowPlaying = useCallback(async () => {
+    setLoadingNowPlaying(true)
+    try {
+      const res = await fetch('/api/spotify/now-playing')
+      if (res.ok) {
+        const data = await res.json()
+        setNowPlaying(data)
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoadingNowPlaying(false)
+    }
+  }, [])
+
   // 4) Carrega Spotify config quando autenticado
   useEffect(() => {
     if (!me) return
@@ -163,13 +193,18 @@ export default function App() {
         if (statusRes.ok) {
           const statusData = await statusRes.json() as { connected: boolean }
           setSpotifyConnected(statusData.connected)
+
+          // Se conectado, busca now playing
+          if (statusData.connected) {
+            fetchNowPlaying()
+          }
         }
       } catch (err) {
         console.error(err)
       }
     }
     fetchSpotifyConfig()
-  }, [me])
+  }, [me, fetchNowPlaying])
 
   async function handleSave() {
     if (!config) return
@@ -330,7 +365,7 @@ export default function App() {
     window.location.href = '/auth/github'
   }
 
-  const widgetUrl = `/widget?ts=${previewKey}`
+  const widgetUrl = me ? `/widget?user=${encodeURIComponent(me.id)}&ts=${previewKey}` : `/widget?ts=${previewKey}`
   const backendBase =
     (import.meta.env.VITE_BACKEND_URL as string) || 'http://127.0.0.1:3000'
   const jsonUrl = me
@@ -882,6 +917,69 @@ export default function App() {
               </div>
             )}
           </div>
+
+          {/* Now Playing Card */}
+          {spotifyConnected && (
+            <div className="rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl p-6 space-y-4 shadow-[0_20px_90px_rgba(0,0,0,0.45)]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.14em] text-neutral-400">Spotify</p>
+                  <h2 className="text-lg font-semibold">Now Playing</h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={fetchNowPlaying}
+                  disabled={loadingNowPlaying}
+                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs hover:bg-white/10 transition disabled:opacity-50"
+                >
+                  {loadingNowPlaying ? 'Carregando...' : 'Atualizar'}
+                </button>
+              </div>
+
+              {nowPlaying ? (
+                <div className="space-y-3">
+                  <div className="flex gap-3">
+                    {nowPlaying.track.albumArt && (
+                      <img
+                        src={nowPlaying.track.albumArt}
+                        alt={nowPlaying.track.album}
+                        className="w-16 h-16 rounded-lg shadow-lg"
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-white truncate">{nowPlaying.track.name}</p>
+                      <p className="text-sm text-neutral-400 truncate">{nowPlaying.track.artists.join(', ')}</p>
+                      <p className="text-xs text-neutral-500 truncate">{nowPlaying.track.album}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className={`px-2 py-1 rounded-full ${nowPlaying.isPlaying ? 'bg-emerald-500/20 text-emerald-300' : 'bg-neutral-700/50 text-neutral-400'}`}>
+                      {nowPlaying.isPlaying ? '▶ Tocando agora' : '⏸ Última tocada'}
+                    </span>
+                    {nowPlaying.lastPlayedAt && !nowPlaying.isPlaying && (
+                      <span className="text-neutral-500">
+                        {new Date(nowPlaying.lastPlayedAt).toLocaleString('pt-BR')}
+                      </span>
+                    )}
+                  </div>
+
+                  <a
+                    href={nowPlaying.track.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block w-full rounded-xl bg-[#1DB954] px-4 py-2 text-center text-sm font-semibold text-white hover:bg-[#1ed760] transition"
+                  >
+                    Abrir no Spotify
+                  </a>
+                </div>
+              ) : (
+                <p className="text-sm text-neutral-400">
+                  {loadingNowPlaying ? 'Carregando...' : 'Nenhuma música tocando ou recentemente tocada'}
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl p-6 space-y-4 shadow-[0_20px_90px_rgba(0,0,0,0.45)]">
             <div className="flex items-center justify-between text-sm">

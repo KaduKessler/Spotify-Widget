@@ -8,6 +8,19 @@ import {
 } from '../lib/db.js'
 import { renderSvg } from '../lib/svg.js'
 import { parseWidgetConfig } from '../lib/validation.js'
+import { getNowPlayingForUser } from './spotify-now-playing.js'
+
+async function toDataUri(url: string): Promise<string | undefined> {
+  try {
+    const res = await fetch(url)
+    if (!res.ok) return undefined
+    const buf = Buffer.from(await res.arrayBuffer())
+    const mime = res.headers.get('content-type') || 'image/jpeg'
+    return `data:${mime};base64,${buf.toString('base64')}`
+  } catch {
+    return undefined
+  }
+}
 
 export async function registerWidgetRoute(app: FastifyInstance) {
   // Retorna a configuração do widget do usuário autenticado, ou a global
@@ -99,27 +112,141 @@ export async function registerWidgetRoute(app: FastifyInstance) {
     }
   })
 
-  // Rota que serve o SVG do widget (compatibilidade)
-  app.get('/widget', async (_req, reply) => {
+  // Rota que serve o SVG do widget
+  app.get('/widget', async (req, reply) => {
+    // Tenta pegar username da query string ou da sessão
+    const query = (req as FastifyRequest).query as {
+      user?: string
+      spin?: string
+      scan?: string
+      theme?: 'dark' | 'light'
+      rainbow?: string
+    }
+    const sessionUsername = (req as FastifyRequest).username as
+      | string
+      | undefined
+    const username = query.user || sessionUsername
+
     const config = {
       mode: 'NOW_PLAYING' as 'NOW_PLAYING' | 'FIXED_TRACK',
       theme: 'dark' as 'dark' | 'light',
+      trackId: null as string | null,
     }
 
-    // Por enquanto, track fake. Depois ligamos no Spotify.
-    const track =
-      config.mode === 'FIXED_TRACK'
-        ? { name: 'Sua música fixa', artist: 'Artista Fixo' }
-        : { name: 'Now playing (fake)', artist: 'Spotify-Readme' }
+    type WidgetTrack = {
+      name: string
+      artist: string
+      cover_url?: string | undefined
+      isPlaying?: boolean | undefined
+      lastPlayedAt?: string | undefined
+    }
 
-    const svg = renderSvg(
-      track as { name: string; artist: string },
-      config.theme,
-    )
+    let track: WidgetTrack = {
+      name: 'Spotify Readme Widget',
+      artist: 'Configure no painel',
+    }
+
+    // Se usuário especificado, busca config dele
+    let scanCodeSrc: string | undefined
+    const spin = query.spin === '1' || query.spin === 'true'
+    const rainbow = query.rainbow === '1' || query.rainbow === 'true'
+    const themeOverride = query.theme
+
+    if (username) {
+      const user = await getUserByUsername(username)
+      if (user) {
+        const userConfig = await getConfigByUserId(user.id)
+        if (userConfig) {
+          config.mode =
+            userConfig.mode === 'FIXED_TRACK' ? 'FIXED_TRACK' : 'NOW_PLAYING'
+          config.theme = userConfig.theme === 'light' ? 'light' : 'dark'
+          config.trackId = userConfig.trackId
+        }
+
+        // Permite override de tema via query
+        if (
+          themeOverride &&
+          (themeOverride === 'dark' || themeOverride === 'light')
+        ) {
+          config.theme = themeOverride
+        }
+
+        // Se modo NOW_PLAYING e tem Spotify conectado
+        if (config.mode === 'NOW_PLAYING' && user.spotifyAccessToken) {
+          try {
+            const nowPlaying = await getNowPlayingForUser(user.id, app)
+
+            if (nowPlaying) {
+              let cover: string | undefined
+              if (nowPlaying.track.albumArt) {
+                // Usa data URI para evitar bloqueios de CORS ao embutir SVG via <img>
+                cover =
+                  (await toDataUri(nowPlaying.track.albumArt)) ||
+                  nowPlaying.track.albumArt ||
+                  undefined
+              }
+              track = {
+                name: nowPlaying.track.name,
+                artist: nowPlaying.track.artists.join(', '),
+                cover_url: cover,
+                // extras para renderização
+                isPlaying: !!nowPlaying.isPlaying,
+                lastPlayedAt: nowPlaying.lastPlayedAt,
+              }
+
+              // Se solicitou scan code e há uri do Spotify, gera data URI
+              if (
+                (query.scan === '1' || query.scan === 'true') &&
+                nowPlaying.track.uri
+              ) {
+                scanCodeSrc = await getScanCodeDataUri(nowPlaying.track.uri)
+              }
+            }
+          } catch (err) {
+            app.log.error(
+              { err, username },
+              'Failed to fetch now playing for widget',
+            )
+          }
+        }
+      }
+    }
+
+    const svg = (
+      renderSvg as unknown as (
+        t: WidgetTrack,
+        theme: 'dark' | 'light',
+        opts?: {
+          spin?: boolean | undefined
+          rainbow?: boolean | undefined
+          scanCodeSrc?: string | undefined
+        },
+      ) => string
+    )(track, config.theme, {
+      spin,
+      rainbow,
+      scanCodeSrc,
+    })
 
     reply
       .header('Content-Type', 'image/svg+xml')
       .header('Cache-Control', 'no-cache')
       .send(svg)
   })
+}
+
+async function getScanCodeDataUri(
+  spotifyUri: string,
+): Promise<string | undefined> {
+  // Gera o código escaneável (PNG) a partir da URI do Spotify
+  // Exemplo: https://scannables.scdn.co/uri/plain/png/000000/white/640/spotify:track:...
+  const url = `https://scannables.scdn.co/uri/plain/png/000000/white/640/${encodeURIComponent(spotifyUri)}`
+  try {
+    const res = await fetch(url)
+    if (!res.ok) return undefined
+    const buf = Buffer.from(await res.arrayBuffer())
+    return `data:image/png;base64,${buf.toString('base64')}`
+  } catch {
+    return undefined
+  }
 }

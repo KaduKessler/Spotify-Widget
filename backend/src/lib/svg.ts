@@ -2,120 +2,147 @@ type TrackInfo = {
   name: string
   artist: string
   cover_url?: string
+  isPlaying?: boolean
+  lastPlayedAt?: string
 }
 
-export function renderSvg(track: TrackInfo, theme: 'dark' | 'light') {
-  const bg = theme === 'dark' ? '#121212' : '#F5F5F5'
-  const textPrimary = theme === 'dark' ? '#FFFFFF' : '#111111'
-  const textSecondary = theme === 'dark' ? '#B3B3B3' : '#555555'
+export function renderSvg(
+  track: TrackInfo,
+  theme: 'dark' | 'light',
+  opts?: { spin?: boolean; rainbow?: boolean; scanCodeSrc?: string },
+) {
+  const width = 495
+  const height = 160
+  const bg = theme === 'dark' ? '#151b23' : '#ffffff'
+  const textPrimary = theme === 'dark' ? '#FFFFFF' : '#161B22'
+  const textSecondary = theme === 'dark' ? 'rgba(240,248,255,0.66)' : 'rgba(22,27,34,0.66)'
+  // const accent = '#1DB954' // não utilizado após remover o ícone
 
-  const cover = track.cover_url ?? 'https://placehold.co/400x400/png' // Placeholder show de bola
+  const cover = track.cover_url ?? 'https://placehold.co/400x400/png'
 
-  const safeName = escapeXml(track.name)
-  const safeArtist = escapeXml(track.artist)
+  // Área útil para título e artista (entre capa e scan code)
+  const hasScan = !!opts?.scanCodeSrc
+  const contentStartX = 160
+  const contentEndX = width - 20 - (hasScan ? 120 : 0)
+  const centerX = Math.floor((contentStartX + contentEndX) / 2)
+  const maxTextWidth = contentEndX - contentStartX
+
+  // Trunca por largura aproximada (font-size * 0.55 por caractere)
+  const titleText = truncateByWidth(track.name, 20, maxTextWidth)
+  const artistText = truncateByWidth(track.artist, 18, maxTextWidth)
+  const safeName = escapeXml(titleText)
+  const safeArtist = escapeXml(artistText)
+  // Sem status textual
+
+  // Equalizer abaixo do conteúdo de texto
+  const eqBarWidth = 10
+  const eqGap = 2
+  const eqBarCount = 20
+  const totalBarsWidth = eqBarCount * eqBarWidth + (eqBarCount - 1) * eqGap
+  const eqLeftX = centerX - Math.floor(totalBarsWidth / 2)
 
   return `
-<svg width="460" height="140" viewBox="0 0 460 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
 
   <defs>
-    <linearGradient id="bg-grad" x1="0" y1="0" x2="460" y2="140">
-      <stop offset="0%" stop-color="${bg}"/>
-      <stop offset="100%" stop-color="${theme === 'dark' ? '#181818' : '#EDEDED'}"/>
-    </linearGradient>
-
-    <clipPath id="cover-clip">
-      <rect x="20" y="20" width="100" height="100" rx="12"/>
-    </clipPath>
+    <mask id="cover-mask">
+      <rect x="20" y="20" width="120" height="120" rx="10" fill="#fff"/>
+    </mask>
+    <filter id="card-shadow" x="-20" y="-20" width="${width + 40}" height="${height + 40}" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000" flood-opacity="${theme === 'dark' ? '0.35' : '0.2'}"/>
+    </filter>
   </defs>
 
-  <rect width="460" height="140" rx="18" fill="url(#bg-grad)"/>
+  <rect width="${width}" height="${height}" rx="8" fill="${bg}" filter="url(#card-shadow)"/>
+
+  <!-- Barras do equalizer alinhadas com a base da capa -->
+  ${renderEq(eqLeftX, 110, theme, opts?.rainbow)}
 
   <!-- Capa -->
-  <image href="${cover}" x="20" y="20" width="100" height="100" clip-path="url(#cover-clip)"/>
+  <g>
+    <g>
+      ${opts?.spin ? `<animateTransform attributeName="transform" type="rotate" from="0 80 80" to="360 80 80" dur="10s" repeatCount="indefinite"/>` : ''}
+      <image xlink:href="${cover}" href="${cover}" x="20" y="20" width="120" height="120" mask="url(#cover-mask)"/>
+      <rect x="20" y="20" width="120" height="120" rx="10" fill="none" stroke="${theme === 'dark' ? '#1b2027' : '#f1f3f5'}"/>
+    </g>
+  </g>
 
-  <!-- Nome da música -->
-  <text x="140" y="60" fill="${textPrimary}" font-size="20" font-family="sans-serif" font-weight="600">
+  <!-- Conteúdo centralizado: título acima, artista no meio da capa (na frente das barras) -->
+  <text x="${centerX}" y="58" fill="${textPrimary}" font-size="20" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif" font-weight="600" text-anchor="middle">
     ${safeName}
   </text>
-
-  <!-- Artista -->
-  <text x="140" y="90" fill="${textSecondary}" font-size="16" font-family="sans-serif">
+  <text x="${centerX}" y="84" fill="${textSecondary}" font-size="18" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif" font-weight="500" text-anchor="middle">
     ${safeArtist}
   </text>
 
-  <!-- Equalizer -->
-  ${renderEq(360, 50, theme)}
+  <!-- Scan code opcional (rotacionado) -->
+  ${hasScan ? `
+  <g transform="translate(${width - 20}, 20) rotate(-90)">
+    <image xlink:href="${opts?.scanCodeSrc}" href="${opts?.scanCodeSrc}" x="0" y="0" width="120" height="${height}"/>
+  </g>
+  ` : ''}
 
 </svg>
 `
 }
 
-function renderEq(x: number, y: number, theme: 'dark' | 'light') {
+function renderEq(x: number, y: number, theme: 'dark' | 'light', _rainbow?: boolean) {
   const barColor = theme === 'dark' ? '#1DB954' : '#1DB954'
-  const barWidth = 6
-  const gap = 6
+  const barWidth = 10
+  const gap = 2
+  const barCount = 20
 
-  const yBase = y + 45 // base comum das barras
+  const yBase = y + 30
 
-  // configurações das barras (min, max, duração, atraso)
-  const configs = [
-    { min: 10, max: 32, dur: 0.95, delay: 0.0 },
-    { min: 8, max: 28, dur: 1.05, delay: 0.12 },
-    { min: 6, max: 36, dur: 0.85, delay: 0.06 },
-    { min: 12, max: 30, dur: 1.0, delay: 0.18 },
-    { min: 8, max: 26, dur: 1.15, delay: 0.1 },
-  ]
+  // Gera um array com configurações para cada barra
+  const bars: string[] = []
 
-  // easing suave (cubic-bezier approximated para SMIL)
-  const keyTimes = '0;0.25;0.5;0.75;1'
-  const keySplines = '0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1'
+  for (let i = 0; i < barCount; i++) {
+    const xpos = x + i * (barWidth + gap)
 
-  const bar = (
-    index: number,
-    minHeight: number,
-    maxHeight: number,
-    dur: number,
-    delay: number,
-  ) => {
-    const xpos = x + index * (barWidth + gap)
-    const mid = (minHeight + maxHeight) / 2
+    let minHeight: number
+    let maxHeight: number
 
-    // valores suaves: min -> mid -> max -> mid -> min
-    const heightValues = `${minHeight};${mid};${maxHeight};${mid};${minHeight}`
-    const yValues = `${yBase - minHeight};${yBase - mid};${yBase - maxHeight};${yBase - mid};${yBase - minHeight}`
-    const opacityValues = `0.85;1;0.9;1;0.85`
+    // Barras das extremidades - menores
+    if (i < 3 || i >= barCount - 3) {
+      minHeight = 8
+      maxHeight = 20
+    }
+    // Barras intermediárias - médias
+    else if (i < 8 || i >= barCount - 8) {
+      minHeight = 12
+      maxHeight = 28
+    }
+    // Barra do centro - maior
+    else {
+      minHeight = 16
+      maxHeight = 35
+    }
 
-    return `
-    <rect x="${xpos}" y="${yBase - mid}" width="${barWidth}" height="${mid}" rx="2" fill="${barColor}">
+    // Duração mais lenta: entre 0.5s e 1.2s
+    const dur = (Math.random() * (1.2 - 0.5) + 0.5).toFixed(2)
+
+    const heightValues = `${minHeight};${maxHeight};${minHeight}`
+    const opacityValues = `0.35;1;0.35`
+
+    bars.push(`
+    <rect x="${xpos.toFixed(1)}" y="${yBase - minHeight}" width="${barWidth}" height="${minHeight}" rx="1" fill="${barColor}">
       <animate attributeName="height"
         values="${heightValues}"
-        keyTimes="${keyTimes}"
-        keySplines="${keySplines}"
-        calcMode="spline"
         dur="${dur}s"
-        begin="${delay}s"
         repeatCount="indefinite" />
       <animate attributeName="y"
-        values="${yValues}"
-        keyTimes="${keyTimes}"
-        keySplines="${keySplines}"
-        calcMode="spline"
+        values="${yBase - minHeight};${yBase - maxHeight};${yBase - minHeight}"
         dur="${dur}s"
-        begin="${delay}s"
         repeatCount="indefinite" />
-      <animate attributeName="fill-opacity"
+      <animate attributeName="opacity"
         values="${opacityValues}"
-        keyTimes="${keyTimes}"
-        keySplines="${keySplines}"
-        calcMode="spline"
-        dur="${dur * 2}s"
-        begin="${delay}s"
+        dur="${dur}s"
         repeatCount="indefinite" />
-    </rect>
-  `
+    </rect>`)
   }
 
-  return configs.map((c, i) => bar(i, c.min, c.max, c.dur, c.delay)).join('\n')
+  return bars.join('\n')
 }
 
 function escapeXml(str: string): string {
@@ -125,4 +152,11 @@ function escapeXml(str: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;')
+}
+
+function truncateByWidth(text: string, fontSize: number, maxWidth: number): string {
+  const perChar = fontSize * 0.55
+  const maxChars = Math.max(3, Math.floor(maxWidth / perChar))
+  if (text.length <= maxChars) return text
+  return `${text.slice(0, maxChars - 3)}...`
 }

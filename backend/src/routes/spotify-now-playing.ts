@@ -9,6 +9,7 @@ interface SpotifyTrack {
     name: string
     images: { url: string }[]
   }
+  uri: string
   external_urls: {
     spotify: string
   }
@@ -84,6 +85,124 @@ async function refreshSpotifyToken(
   }
 }
 
+export async function getNowPlayingForUser(
+  userId: number,
+  app: FastifyInstance,
+): Promise<{
+  isPlaying: boolean
+  track: {
+    id: string
+    name: string
+    artists: string[]
+    album: string
+    albumArt: string | null
+    uri: string
+    url: string
+  }
+  lastPlayedAt?: string
+} | null> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      spotifyAccessToken: true,
+      spotifyRefreshToken: true,
+      spotifyTokenExpiresAt: true,
+      spotifyClientId: true,
+      spotifyClientSecret: true,
+    },
+  })
+
+  if (
+    !user ||
+    !user.spotifyAccessToken ||
+    !user.spotifyRefreshToken ||
+    !user.spotifyClientId ||
+    !user.spotifyClientSecret
+  ) {
+    return null
+  }
+
+  let accessToken = user.spotifyAccessToken
+
+  // Verifica se o token expirou
+  if (user.spotifyTokenExpiresAt && user.spotifyTokenExpiresAt < new Date()) {
+    const newToken = await refreshSpotifyToken(user, app)
+    if (!newToken) {
+      return null
+    }
+    accessToken = newToken
+  }
+
+  // Tenta buscar a música atual
+  const currentlyPlayingResponse = await fetch(
+    'https://api.spotify.com/v1/me/player/currently-playing',
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  )
+
+  if (currentlyPlayingResponse.status === 200) {
+    const data =
+      (await currentlyPlayingResponse.json()) as CurrentlyPlayingResponse
+
+    if (data.is_playing && data.item) {
+      const track = data.item
+      return {
+        isPlaying: true,
+        track: {
+          id: track.id,
+          name: track.name,
+          artists: track.artists.map((a) => a.name),
+          album: track.album.name,
+          albumArt: track.album.images[0]?.url || null,
+          uri: track.uri,
+          url: track.external_urls.spotify,
+        },
+      }
+    }
+  }
+
+  // Fallback: busca a última música tocada
+  const recentlyPlayedResponse = await fetch(
+    'https://api.spotify.com/v1/me/player/recently-played?limit=1',
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  )
+
+  if (recentlyPlayedResponse.status === 200) {
+    const data =
+      (await recentlyPlayedResponse.json()) as RecentlyPlayedResponse
+
+    if (data.items && data.items.length > 0) {
+      const item = data.items[0]
+      if (item?.track) {
+        const track = item.track
+        return {
+          isPlaying: false,
+          track: {
+            id: track.id,
+            name: track.name,
+            artists: track.artists.map((a) => a.name),
+            album: track.album.name,
+            albumArt: track.album.images[0]?.url || null,
+            uri: track.uri,
+            url: track.external_urls.spotify,
+          },
+          lastPlayedAt: item.played_at,
+        }
+      }
+    }
+  }
+
+  return null
+}
+
 export async function registerSpotifyNowPlayingRoutes(app: FastifyInstance) {
   app.get('/api/spotify/now-playing', async (request, reply) => {
     const username = request.username
@@ -152,6 +271,7 @@ export async function registerSpotifyNowPlayingRoutes(app: FastifyInstance) {
               artists: data.item.artists.map((a) => a.name),
               album: data.item.album.name,
               albumArt: data.item.album.images[0]?.url || null,
+              uri: data.item.uri,
               url: data.item.external_urls.spotify,
             },
           }
@@ -183,6 +303,7 @@ export async function registerSpotifyNowPlayingRoutes(app: FastifyInstance) {
                 artists: track.artists.map((a) => a.name),
                 album: track.album.name,
                 albumArt: track.album.images[0]?.url || null,
+                uri: track.uri,
                 url: track.external_urls.spotify,
               },
               lastPlayedAt: item.played_at,

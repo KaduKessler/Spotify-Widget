@@ -64,14 +64,18 @@ function buildConfig() {
       ENABLE_PASSWORD_AUTH: legacyProvider === 'password',
       ENABLE_GITHUB_AUTH: legacyProvider === 'github',
       ENABLE_NONE_AUTH: legacyProvider === 'none',
+      REGISTRATION_POLICY: 'open' as 'open',
+      GITHUB_WHITELIST: [],
+      ALLOW_PASSWORD_SIGNUP: true,
+      ADMIN_USERS: [],
       SESSION_SECRET: process.env.SESSION_SECRET || 'devSessionSecret',
       NODE_ENV: process.env.NODE_ENV || 'development',
       ADMIN_USERNAME: process.env.ADMIN_USERNAME || 'admin',
       ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'admin',
       GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID || '',
       GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET || '',
-      APP_URL: process.env.APP_URL || 'http://localhost:3000',
-      ADMIN_URL: process.env.ADMIN_URL || 'http://localhost:5173',
+      APP_URL: process.env.APP_URL || 'http://127.0.0.1:3000',
+      ADMIN_URL: process.env.ADMIN_URL || 'http://127.0.0.1:5173',
     }
   }
 
@@ -79,14 +83,28 @@ function buildConfig() {
     ENABLE_PASSWORD_AUTH,
     ENABLE_GITHUB_AUTH,
     ENABLE_NONE_AUTH,
+    REGISTRATION_POLICY: (process.env.REGISTRATION_POLICY || 'open') as
+      | 'open'
+      | 'github_whitelist'
+      | 'invite_only'
+      | 'closed',
+    GITHUB_WHITELIST:
+      process.env.GITHUB_WHITELIST
+        ? process.env.GITHUB_WHITELIST.split(',').map((s) => s.trim()).filter(Boolean)
+        : [],
+    ALLOW_PASSWORD_SIGNUP: parseBoolean(process.env.ALLOW_PASSWORD_SIGNUP, true),
+    ADMIN_USERS:
+      process.env.ADMIN_USERS
+        ? process.env.ADMIN_USERS.split(',').map((s) => s.trim()).filter(Boolean)
+        : [],
     SESSION_SECRET: process.env.SESSION_SECRET || 'devSessionSecret',
     NODE_ENV: process.env.NODE_ENV || 'development',
     ADMIN_USERNAME: process.env.ADMIN_USERNAME || 'admin',
     ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'admin',
     GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID || '',
     GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET || '',
-    APP_URL: process.env.APP_URL || 'http://localhost:3000',
-    ADMIN_URL: process.env.ADMIN_URL || 'http://localhost:5173',
+    APP_URL: process.env.APP_URL || 'http://127.0.0.1:3000',
+    ADMIN_URL: process.env.ADMIN_URL || 'http://127.0.0.1:5173',
   }
 }
 
@@ -103,6 +121,18 @@ export function loadConfig() {
     }
     if (config.SESSION_SECRET === 'devSessionSecret') {
       console.warn('⚠️  Warning: Using default SESSION_SECRET. Change it in production!')
+    }
+    const validPolicies = ['open', 'github_whitelist', 'invite_only', 'closed']
+    if (!validPolicies.includes(config.REGISTRATION_POLICY)) {
+      console.warn('⚠️  Warning: Invalid REGISTRATION_POLICY. Using "open" as default.')
+      config.REGISTRATION_POLICY = 'open'
+    }
+    if (
+      config.REGISTRATION_POLICY === 'github_whitelist' &&
+      Array.isArray(config.GITHUB_WHITELIST) &&
+      config.GITHUB_WHITELIST.length === 0
+    ) {
+      console.warn('⚠️  Warning: REGISTRATION_POLICY=github_whitelist but GITHUB_WHITELIST is empty.')
     }
   }
 

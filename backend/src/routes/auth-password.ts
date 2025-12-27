@@ -1,7 +1,8 @@
 import { timingSafeEqual } from 'node:crypto'
+import bcrypt from 'bcrypt'
 import type { FastifyInstance } from 'fastify'
 import { loadConfig } from '../lib/config.js'
-import { upsertUser } from '../lib/db.js'
+import { getUserByUsername, upsertUser } from '../lib/db.js'
 
 // Throttle map: IP/username → { attempts, lockUntil }
 const failedAttempts = new Map<
@@ -12,13 +13,18 @@ const failedAttempts = new Map<
 const MAX_ATTEMPTS = 5
 const LOCKOUT_TIME = 5 * 60 * 1000 // 5 minutos
 
-function checkThrottle(key: string): { allowed: true } | { allowed: false; retryAfter: number } {
+function checkThrottle(
+  key: string,
+): { allowed: true } | { allowed: false; retryAfter: number } {
   const record = failedAttempts.get(key)
   if (!record) return { allowed: true }
 
   const now = Date.now()
   if (record.lockUntil > now) {
-    return { allowed: false, retryAfter: Math.ceil((record.lockUntil - now) / 1000) }
+    return {
+      allowed: false,
+      retryAfter: Math.ceil((record.lockUntil - now) / 1000),
+    }
   }
 
   // Lock expirou, reseta
@@ -34,7 +40,9 @@ function recordFailure(key: string) {
 
   if (record.attempts >= MAX_ATTEMPTS) {
     record.lockUntil = now + LOCKOUT_TIME
-    console.warn(`[Auth] Lockout triggered for ${key} after ${record.attempts} attempts`)
+    console.warn(
+      `[Auth] Lockout triggered for ${key} after ${record.attempts} attempts`,
+    )
   }
 
   failedAttempts.set(key, record)
@@ -71,47 +79,73 @@ export async function registerPasswordAuthRoutes(app: FastifyInstance) {
       })
     }
 
-    // Validar credenciais com comparação de tempo constante
+    // 1) Tenta login por usuário do banco com provider 'password'
+    const user = await getUserByUsername(username)
+    if (user && user.provider === 'password' && user.passwordHash) {
+      const ok = await bcrypt.compare(password, user.passwordHash)
+      if (!ok) {
+        recordFailure(throttleKey)
+        const record = failedAttempts.get(throttleKey)
+        console.warn(
+          `[Auth] Failed login attempt for ${username} from ${clientIp} (${record?.attempts}/${MAX_ATTEMPTS})`,
+        )
+        return reply.code(401).send({ error: 'Invalid credentials' })
+      }
+
+      // Login bem-sucedido: resetar tentativas
+      resetFailures(throttleKey)
+
+      // Cookie de sessão: username:role
+      reply
+        .setCookie('session', `${user.username}:${user.role}`, {
+          signed: true,
+          httpOnly: true,
+          sameSite: 'lax',
+          secure: env.NODE_ENV === 'production',
+          path: '/',
+          maxAge: 7 * 24 * 60 * 60,
+        })
+        .send({ ok: true })
+      return
+    }
+
+    // 2) Fallback: credenciais de ADMIN_USERNAME/ADMIN_PASSWORD via env (legacy single admin)
     const usernameMatch =
       username.length === env.ADMIN_USERNAME.length &&
-      timingSafeEqual(
-        Buffer.from(username),
-        Buffer.from(env.ADMIN_USERNAME),
-      )
+      timingSafeEqual(Buffer.from(username), Buffer.from(env.ADMIN_USERNAME))
 
     const passwordMatch =
       password.length === env.ADMIN_PASSWORD.length &&
-      timingSafeEqual(
-        Buffer.from(password),
-        Buffer.from(env.ADMIN_PASSWORD),
-      )
+      timingSafeEqual(Buffer.from(password), Buffer.from(env.ADMIN_PASSWORD))
 
     if (!usernameMatch || !passwordMatch) {
       recordFailure(throttleKey)
       const record = failedAttempts.get(throttleKey)
-      console.warn(`[Auth] Failed login attempt for ${username} from ${clientIp} (${record?.attempts}/${MAX_ATTEMPTS})`)
+      console.warn(
+        `[Auth] Failed login attempt for ${username} from ${clientIp} (${record?.attempts}/${MAX_ATTEMPTS})`,
+      )
       return reply.code(401).send({ error: 'Invalid credentials' })
     }
 
     // Login bem-sucedido: resetar tentativas
     resetFailures(throttleKey)
 
-    // Garante presença do usuário no banco (username único)
+    // Garante presença do usuário admin no banco
     await upsertUser({
       provider: 'password',
       username: env.ADMIN_USERNAME,
       avatarUrl: null,
+      role: 'admin',
     })
 
     reply
-      // Armazena o username na sessão
-      .setCookie('session', env.ADMIN_USERNAME, {
+      .setCookie('session', `${env.ADMIN_USERNAME}:admin`, {
         signed: true,
         httpOnly: true,
         sameSite: 'lax',
         secure: env.NODE_ENV === 'production',
         path: '/',
-        maxAge: 7 * 24 * 60 * 60, // 7 dias
+        maxAge: 7 * 24 * 60 * 60,
       })
       .send({ ok: true })
   })

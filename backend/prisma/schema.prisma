@@ -17,6 +17,12 @@ model User {
   username  String   @unique // Nome único para URL pública
   avatarUrl String?  @map("avatar_url")
   
+  // Role for RBAC: 'admin' | 'user' | 'viewer'
+  role      String   @default("user")
+
+  // Password auth (optional for provider='password')
+  passwordHash String? @map("password_hash")
+  
   // Spotify credentials per-user (optional)
   spotifyClientId     String? @map("spotify_client_id")
   spotifyClientSecret String? @map("spotify_client_secret")
@@ -48,4 +54,17 @@ model WidgetConfig {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("widget_config")
+}
+
+// GitHub Whitelist - Controle de acesso para usuários GitHub
+model GitHubWhitelist {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique // Username do GitHub permitido
+  addedBy   String?  @map("added_by") // NULL se não foi adição manual, senão é o username do admin
+  note      String?  // Contexto: "Importado do .env", "Criado durante política open", etc
+  createdAt DateTime @default(now()) @map("created_at")
+  removedBy String?  @map("removed_by") // NULL se ativo, username do admin se removido
+  removedAt DateTime? @map("removed_at") // NULL se ativo, timestamp de remoção
+
+  @@map("github_whitelist")
 }

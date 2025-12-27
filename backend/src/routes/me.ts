@@ -18,6 +18,7 @@ export async function registerMeRoute(app: FastifyInstance) {
       provider: user.provider,
       username: user.username,
       avatar_url: user.avatarUrl,
+      role: user.role,
     }
   })
 }

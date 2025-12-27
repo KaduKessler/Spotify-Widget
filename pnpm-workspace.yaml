@@ -3,6 +3,7 @@ packages:
   - admin
 
 onlyBuiltDependencies:
+  - bcrypt
   - better-sqlite3
   - esbuild
   - prisma

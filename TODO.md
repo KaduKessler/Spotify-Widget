@@ -53,7 +53,7 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 - [x] Logging de tentativas falhadas no console
 - [x] Cookie com maxAge de 7 dias
 
-### Documentation
+### Documentação
 
 - [x] README.md completo: setup, env vars, fluxos de auth, estrutura DB
 - [x] Documentado rate limiting, throttling, cookies, CSRF
@@ -65,24 +65,24 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 
 ### Schema & Config Changes
 
-- [ ] Adicionar campo `spotifyClientId`, `spotifyClientSecret` (encrypted) em `User`
+- [x] Adicionar campo `spotifyClientId`, `spotifyClientSecret` em `User` (ainda sem encrypt)
   - Ou criar modelo `SpotifyConfig` (1:1 com User)
-- [ ] Adicionar env vars para políticas:
+- [x] Adicionar env vars para políticas:
   - `REGISTRATION_POLICY`: `open` | `github_whitelist` | `invite_only` | `closed` (padrão: `open`)
   - `GITHUB_WHITELIST`: lista de usernames separada por vírgula (se policy=github_whitelist)
   - `ALLOW_PASSWORD_SIGNUP`: true | false (padrão: true)
 
 ### Registration Policy: Open (Baseline)
 
-- [ ] Qualquer um faz signup via password (se enabled) ou GitHub
+- [ ] Qualquer um faz signup via password (se enabled) ou GitHub (frontend ainda não trata)
 - [ ] Validação básica (username único, email válido se necessário)
 - [ ] Envio de confirmação por email (opcional, depois)
 
 ### Registration Policy: GitHub Whitelist
 
-- [ ] No fluxo `/auth/github/callback`, validar username contra `GITHUB_WHITELIST`
-- [ ] Se não na whitelist, rejeitar com mensagem apropriada
-- [ ] Desabilitar password signup (redirecionar para GitHub)
+- [x] No fluxo `/auth/github/callback`, validar username contra `GITHUB_WHITELIST` (DB + env)
+- [x] Se não na whitelist, rejeitar com mensagem apropriada
+- [ ] Desabilitar password signup (redirecionar para GitHub) e ajustar UX
 
 ### Registration Policy: Invite Tokens
 
@@ -119,9 +119,9 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 
 ### Backend Routes
 
-- [ ] `GET /api/spotify-config` (retorna clientId mascarado, se existir)
-- [ ] `POST /api/spotify-config` (valida e salva clientId/Secret)
-- [ ] `DELETE /api/spotify-config` (limpa credenciais do user)
+- [x] `GET /api/spotify-config` (retorna clientId mascarado, se existir)
+- [x] `POST /api/spotify-config` (valida e salva clientId/Secret)
+- [x] `DELETE /api/spotify-config` (limpa credenciais do user)
 
 ### Widget com Spotify (Future)
 
@@ -175,6 +175,15 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 - [ ] Suporte tema claro/escuro (persistir em localStorage)
 - [ ] Responsividade mobile
 - [ ] Feedback visual: loading states, error messages, success toasts
+
+---
+
+## ✅ Extras concluídos fora do escopo original
+
+- Admin UI para gestão de usuários e whitelist GitHub (tabelas, batch import) no frontend
+- Fluxo de whitelist GitHub completo no backend (modelo, rotas admin, import do .env, reativação suave)
+- Postman collections e ambientes (auth, admin, public API) + README de uso
+- Variáveis do admin parametrizadas via `.env` (`VITE_DEV_PORT`, `VITE_BACKEND_URL`) e `vite.config.ts` lendo-as com `loadEnv`
 
 ---
 

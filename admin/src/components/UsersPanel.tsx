@@ -1,6 +1,6 @@
 import { Edit, Lock, Plus } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
-import { requestJson, postJson, putJson } from '../api/client'
+import { postJson, putJson, requestJson } from '../api/client'
 import Button from './Button'
 import type { DataTableColumn } from './DataTable'
 import DataTable from './DataTable'
@@ -116,10 +116,9 @@ export default function UsersPanel() {
     setResetting(true)
     setResetError(null)
     try {
-      await putJson(
-        `/api/admin/users/${resettingUser.username}/password`,
-        { password: resetPassword.trim() },
-      )
+      await putJson(`/api/admin/users/${resettingUser.username}/password`, {
+        password: resetPassword.trim(),
+      })
       setResettingUser(null)
       setResetPassword('')
     } catch (err: unknown) {

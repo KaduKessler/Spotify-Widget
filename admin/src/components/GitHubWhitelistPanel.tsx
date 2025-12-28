@@ -1,6 +1,6 @@
 import { Plus, Search, Trash2, Upload } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
-import { requestJson, postJson, del } from '../api/client'
+import { del, postJson, requestJson } from '../api/client'
 import Button from './Button'
 import type { DataTableColumn } from './DataTable'
 import DataTable from './DataTable'
@@ -94,7 +94,10 @@ export default function GitHubWhitelistPanel() {
     } catch (err) {
       console.error(err)
       const errorMsg =
-        err instanceof Error && (err as any).status === 409
+        err &&
+          typeof err === 'object' &&
+          'status' in err &&
+          (err as { status?: number }).status === 409
           ? 'Username já existe na whitelist'
           : err instanceof Error
             ? err.message

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { requestJson, postJson, post, del } from './api/client'
+import { del, post, postJson, requestJson } from './api/client'
 import GitHubWhitelistPanel from './components/GitHubWhitelistPanel'
 import UsersPanel from './components/UsersPanel'
 
@@ -148,8 +148,12 @@ export default function App() {
       try {
         const data = await requestJson<Me>('/api/me')
         setMe(data)
-      } catch (err: any) {
-        if (err?.status === 401) {
+      } catch (err: unknown) {
+        const status =
+          err && typeof err === 'object' && 'status' in err
+            ? (err as { status?: number }).status
+            : undefined
+        if (status === 401) {
           setMe(null)
           return
         }
@@ -170,10 +174,12 @@ export default function App() {
       setLoadingConfig(true)
       setConfigError(null)
       try {
-        const data = (await requestJson<Config & {
-          trackId?: string | null
-          exposeNowPlaying?: boolean
-        }>('/api/config'))
+        const data = await requestJson<
+          Config & {
+            trackId?: string | null
+            exposeNowPlaying?: boolean
+          }
+        >('/api/config')
         // Normaliza snake/camel vindo do backend
         const normalized: Config = {
           ...data,
@@ -208,7 +214,7 @@ export default function App() {
         lastPlayedAt?: string
       }>('/api/spotify/now-playing')
       setNowPlaying(data)
-    } catch (err) {
+    } catch (_err) {
       // ignore errors from now-playing
     } finally {
       setLoadingNowPlaying(false)
@@ -231,16 +237,18 @@ export default function App() {
         }
         // Check if Spotify is connected (has access token)
         try {
-          const statusData = await requestJson<{ connected: boolean }>('/api/spotify/status')
+          const statusData = await requestJson<{ connected: boolean }>(
+            '/api/spotify/status',
+          )
           setSpotifyConnected(statusData.connected)
           if (statusData.connected) {
             fetchNowPlaying()
           }
-        } catch (err) {
+        } catch (_err) {
           // ignore status errors
         }
-      } catch (err) {
-        console.error(err)
+      } catch (_err) {
+        console.error(_err)
       }
     }
     fetchSpotifyConfig()
@@ -285,7 +293,7 @@ export default function App() {
           clientSecret: string | null
         }>('/api/spotify-config')
         setSpotifyConfig(data)
-      } catch (err) {
+      } catch (_err) {
         // ignore
       }
     } catch (err) {
@@ -353,12 +361,16 @@ export default function App() {
         const meData = await requestJson<Me>('/api/me')
         setMe(meData)
         setLoginPassword('')
-      } catch (err) {
+      } catch (_err) {
         setAuthError('Erro ao obter informações do usuário.')
         return
       }
-    } catch (err: any) {
-      if (err?.status === 401 || err?.status === 400) {
+    } catch (err: unknown) {
+      const status =
+        err && typeof err === 'object' && 'status' in err
+          ? (err as { status?: number }).status
+          : undefined
+      if (status === 401 || status === 400) {
         setAuthError('Usuário ou senha inválidos.')
       } else {
         console.error(err)
@@ -468,7 +480,11 @@ export default function App() {
                     </p>
                   </div>
                   <div className="h-10 w-10 rounded-full bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center">
-                    <svg viewBox="0 0 24 24" aria-hidden="true" className="w-5 h-5 fill-emerald-200">
+                    <svg
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      className="w-5 h-5 fill-emerald-200"
+                    >
                       <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" />
                     </svg>
                   </div>
@@ -502,11 +518,19 @@ export default function App() {
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 transition-colors duration-200"
                       >
                         {showPassword ? (
-                          <svg viewBox="0 0 24 24" aria-hidden="true" className="w-4 h-4 fill-current">
+                          <svg
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            className="w-4 h-4 fill-current"
+                          >
                             <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
                           </svg>
                         ) : (
-                          <svg viewBox="0 0 24 24" aria-hidden="true" className="w-4 h-4 fill-current">
+                          <svg
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            className="w-4 h-4 fill-current"
+                          >
                             <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7z" />
                           </svg>
                         )}
@@ -527,11 +551,19 @@ export default function App() {
               <div className="fade-in-up rounded-2xl border border-white/5 bg-linear-to-br from-neutral-900/90 via-neutral-900/80 to-neutral-800/80 p-5 shadow-sm space-y-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs font-semibold text-neutral-100">Com GitHub</p>
-                    <p className="text-[11px] text-neutral-500">OAuth seguro e verificado.</p>
+                    <p className="text-xs font-semibold text-neutral-100">
+                      Com GitHub
+                    </p>
+                    <p className="text-[11px] text-neutral-500">
+                      OAuth seguro e verificado.
+                    </p>
                   </div>
                   <div className="h-10 w-10 rounded-full bg-neutral-800 border border-white/10 flex items-center justify-center">
-                    <svg viewBox="0 0 16 16" aria-hidden="true" className="w-5 h-5 fill-white/80">
+                    <svg
+                      viewBox="0 0 16 16"
+                      aria-hidden="true"
+                      className="w-5 h-5 fill-white/80"
+                    >
                       <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.54 5.47 7.59.4.07.55-.17.55-.38 0-.19 0-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8Z" />
                     </svg>
                   </div>

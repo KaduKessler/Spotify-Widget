@@ -15,6 +15,17 @@ if ! cmd_exists pnpm; then
   exit 1
 fi
 
+echo "==> Checking Node.js version (>= 18)"
+if ! cmd_exists node; then
+  echo "ERROR: node not found. Install Node.js 18+."
+  exit 1
+fi
+NODE_MAJOR=$(node -v | sed 's/^v//' | cut -d. -f1)
+if [[ "$NODE_MAJOR" -lt 18 ]]; then
+  echo "ERROR: Node.js 18+ required. Detected: $(node -v)"
+  exit 1
+fi
+
 generate_secret() {
   if cmd_exists openssl; then
     openssl rand -hex 32
@@ -56,9 +67,10 @@ EOF
     local secret
     secret=$(generate_secret)
     if grep -q "^SESSION_SECRET=" "$env_file"; then
-      # sed -i is different across platforms; use backup extension for portability
-      sed -i.bak "s/^SESSION_SECRET=.*/SESSION_SECRET=${secret}/" "$env_file" || \
-        perl -0777 -pe "s/^SESSION_SECRET=.*/SESSION_SECRET=${secret}/" -i "$env_file"
+      # Attempt portable in-place replacement (sed), fallback to Node if sed fails
+      if ! sed -i.bak "s/^SESSION_SECRET=.*/SESSION_SECRET=${secret}/" "$env_file" 2>/dev/null; then
+        node -e "const fs=require('fs');const p=process.argv[1], sec=process.argv[2];let s=fs.readFileSync(p,'utf8');s=s.replace(/^SESSION_SECRET=.*/m,'SESSION_SECRET='+sec);fs.writeFileSync(p,s);" "$env_file" "$secret"
+      fi
     else
       echo "SESSION_SECRET=$secret" >> "$env_file"
     fi

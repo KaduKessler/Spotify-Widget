@@ -1,5 +1,6 @@
 import { Edit, Lock, Plus } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
+import { requestJson, postJson, putJson } from '../api/client'
 import Button from './Button'
 import type { DataTableColumn } from './DataTable'
 import DataTable from './DataTable'
@@ -41,9 +42,7 @@ export default function UsersPanel() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/admin/users')
-      if (!res.ok) throw new Error('Failed to fetch users')
-      const data = (await res.json()) as { users: User[] }
+      const data = await requestJson<{ users: User[] }>('/api/admin/users')
       setUsers(data.users)
     } catch (err) {
       console.error(err)
@@ -66,19 +65,11 @@ export default function UsersPanel() {
     setCreating(true)
     setCreateError(null)
     try {
-      const res = await fetch('/api/admin/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: newUsername.trim(),
-          password: newPassword.trim(),
-          role: newRole,
-        }),
+      await postJson('/api/admin/users', {
+        username: newUsername.trim(),
+        password: newPassword.trim(),
+        role: newRole,
       })
-      if (!res.ok) {
-        const errData = await res.json()
-        throw new Error(errData.error || 'Failed to create user')
-      }
       // Refresh list
       await fetchUsers()
       setShowCreateModal(false)
@@ -100,15 +91,9 @@ export default function UsersPanel() {
     setUpdating(true)
     setUpdateError(null)
     try {
-      const res = await fetch(`/api/admin/users/${editingUser.username}/role`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: editRole }),
+      await putJson(`/api/admin/users/${editingUser.username}/role`, {
+        role: editRole,
       })
-      if (!res.ok) {
-        const errData = await res.json()
-        throw new Error(errData.error || 'Failed to update role')
-      }
       await fetchUsers()
       setEditingUser(null)
     } catch (err: unknown) {
@@ -131,18 +116,10 @@ export default function UsersPanel() {
     setResetting(true)
     setResetError(null)
     try {
-      const res = await fetch(
+      await putJson(
         `/api/admin/users/${resettingUser.username}/password`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password: resetPassword.trim() }),
-        },
+        { password: resetPassword.trim() },
       )
-      if (!res.ok) {
-        const errData = await res.json()
-        throw new Error(errData.error || 'Failed to reset password')
-      }
       setResettingUser(null)
       setResetPassword('')
     } catch (err: unknown) {

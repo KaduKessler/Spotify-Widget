@@ -1,5 +1,6 @@
 import { Plus, Search, Trash2, Upload } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
+import { requestJson, postJson, del } from '../api/client'
 import Button from './Button'
 import type { DataTableColumn } from './DataTable'
 import DataTable from './DataTable'
@@ -12,11 +13,6 @@ type WhitelistEntry = {
   createdAt: string
   removedBy: string | null
   removedAt: string | null
-}
-
-type ApiError = {
-  error: string
-  message: string
 }
 
 export default function GitHubWhitelistPanel() {
@@ -55,9 +51,9 @@ export default function GitHubWhitelistPanel() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/admin/whitelist')
-      if (!res.ok) throw new Error('Failed to fetch whitelist')
-      const data = (await res.json()) as { whitelist: WhitelistEntry[] }
+      const data = await requestJson<{ whitelist: WhitelistEntry[] }>(
+        '/api/admin/whitelist',
+      )
       setWhitelist(data.whitelist)
     } catch (err) {
       console.error(err)
@@ -82,21 +78,11 @@ export default function GitHubWhitelistPanel() {
     setAddSuccess(null)
 
     try {
-      const res = await fetch('/api/admin/whitelist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: newUsername.trim(),
-          note: newNote.trim() || undefined,
-          validateGithub,
-        }),
+      await postJson('/api/admin/whitelist', {
+        username: newUsername.trim(),
+        note: newNote.trim() || undefined,
+        validateGithub,
       })
-
-      if (!res.ok) {
-        const data = (await res.json()) as ApiError
-        setAddError(data.message || 'Erro ao adicionar')
-        return
-      }
 
       setAddSuccess('Username adicionado com sucesso!')
       setNewUsername('')
@@ -107,7 +93,13 @@ export default function GitHubWhitelistPanel() {
       fetchWhitelist()
     } catch (err) {
       console.error(err)
-      setAddError('Erro ao adicionar à whitelist.')
+      const errorMsg =
+        err instanceof Error && (err as any).status === 409
+          ? 'Username já existe na whitelist'
+          : err instanceof Error
+            ? err.message
+            : 'Erro ao adicionar à whitelist.'
+      setAddError(errorMsg)
     } finally {
       setAdding(false)
     }
@@ -129,30 +121,18 @@ export default function GitHubWhitelistPanel() {
     setBatchResult(null)
 
     try {
-      const res = await fetch('/api/admin/whitelist/batch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          usernames: list,
-          validateGithub: batchValidateGithub,
-          skipErrors: true,
-        }),
-      })
-
-      if (!res.ok) {
-        const data = (await res.json()) as ApiError
-        setBatchError(data.message || 'Erro ao fazer import')
-        return
-      }
-
-      const data = (await res.json()) as {
+      const data = await postJson<{
         added: number
         errors: number
         results: {
           added: string[]
           errors: Array<{ username: string; error: string; message: string }>
         }
-      }
+      }>('/api/admin/whitelist/batch', {
+        usernames: list,
+        validateGithub: batchValidateGithub,
+        skipErrors: true,
+      })
 
       // Separar erros reais dos que já existem
       const realErrors = data.results.errors.filter(
@@ -193,19 +173,7 @@ export default function GitHubWhitelistPanel() {
     if (!confirm(`Remover ${username} da whitelist?`)) return
 
     try {
-      const res = await fetch(
-        `/api/admin/whitelist/${encodeURIComponent(username)}`,
-        {
-          method: 'DELETE',
-        },
-      )
-
-      if (!res.ok) {
-        const data = (await res.json()) as ApiError
-        alert(data.message || 'Erro ao remover')
-        return
-      }
-
+      await del(`/api/admin/whitelist/${encodeURIComponent(username)}`)
       fetchWhitelist()
     } catch (err) {
       console.error(err)

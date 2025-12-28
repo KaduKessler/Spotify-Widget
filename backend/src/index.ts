@@ -1,6 +1,7 @@
 import path from 'node:path'
 import cookie from '@fastify/cookie'
 import cors from '@fastify/cors'
+import helmet from '@fastify/helmet'
 import rateLimit from '@fastify/rate-limit'
 import fastifyStatic from '@fastify/static'
 import Fastify from 'fastify'
@@ -98,6 +99,32 @@ async function bootstrap() {
       path: '/',
     },
   })
+
+  // Security headers via Helmet
+  if (env.ENABLE_HELMET) {
+    await app.register(helmet, {
+      // Em desenvolvimento desativa CSP para evitar bloqueios por inline styles durante dev
+      contentSecurityPolicy:
+        env.NODE_ENV === 'production'
+          ? {
+            directives: {
+              defaultSrc: ["'self'"],
+              scriptSrc: ["'self'"],
+              styleSrc: ["'self'", "'unsafe-inline'"],
+              imgSrc: ["'self'", 'data:'],
+              connectSrc: ["'self'"],
+            },
+          }
+          : false,
+      // Permite desabilitar HSTS caso o proxy (ex: Nginx Proxy Manager) já adicione o header
+      hsts: env.HELMET_DISABLE_HSTS
+        ? false
+        : { maxAge: 31536000, includeSubDomains: true },
+      frameguard: { action: 'deny' },
+      referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+      noSniff: true,
+    })
+  }
 
   // Rate limiting global (mais permissivo)
   await app.register(rateLimit, {

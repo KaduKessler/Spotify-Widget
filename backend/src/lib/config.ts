@@ -65,9 +65,9 @@ function buildConfig() {
       ENABLE_GITHUB_AUTH: legacyProvider === 'github',
       ENABLE_NONE_AUTH: legacyProvider === 'none',
       REGISTRATION_POLICY: 'open' as 'open',
-      GITHUB_WHITELIST: [],
+      GITHUB_WHITELIST: [] as string[],
       ALLOW_PASSWORD_SIGNUP: true,
-      ADMIN_USERS: [],
+      ADMIN_USERS: [] as string[],
       SESSION_SECRET: process.env.SESSION_SECRET || 'devSessionSecret',
       NODE_ENV: process.env.NODE_ENV || 'development',
       ADMIN_USERNAME: process.env.ADMIN_USERNAME || 'admin',
@@ -83,6 +83,9 @@ function buildConfig() {
     ENABLE_PASSWORD_AUTH,
     ENABLE_GITHUB_AUTH,
     ENABLE_NONE_AUTH,
+    // Security headers / helmet control
+    ENABLE_HELMET: parseBoolean(process.env.ENABLE_HELMET, true),
+    HELMET_DISABLE_HSTS: parseBoolean(process.env.HELMET_DISABLE_HSTS, true),
     REGISTRATION_POLICY: (process.env.REGISTRATION_POLICY || 'open') as
       | 'open'
       | 'github_whitelist'
@@ -91,12 +94,12 @@ function buildConfig() {
     GITHUB_WHITELIST:
       process.env.GITHUB_WHITELIST
         ? process.env.GITHUB_WHITELIST.split(',').map((s) => s.trim()).filter(Boolean)
-        : [],
+        : [] as string[],
     ALLOW_PASSWORD_SIGNUP: parseBoolean(process.env.ALLOW_PASSWORD_SIGNUP, true),
     ADMIN_USERS:
       process.env.ADMIN_USERS
         ? process.env.ADMIN_USERS.split(',').map((s) => s.trim()).filter(Boolean)
-        : [],
+        : [] as string[],
     SESSION_SECRET: process.env.SESSION_SECRET || 'devSessionSecret',
     NODE_ENV: process.env.NODE_ENV || 'development',
     ADMIN_USERNAME: process.env.ADMIN_USERNAME || 'admin',

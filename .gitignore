@@ -44,3 +44,4 @@ logs/
 
 # Admin build
 /admin/dist
+private-docs/

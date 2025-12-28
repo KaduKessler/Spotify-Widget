@@ -3,7 +3,9 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
+    "dev": "pnpm -r --parallel dev",
     "dev:backend": "pnpm --filter backend dev",
+    "dev:admin": "pnpm --filter admin dev",
     "build:backend": "pnpm --filter backend build",
     "start:backend": "pnpm --filter backend start",
     "lint": "biome lint .",

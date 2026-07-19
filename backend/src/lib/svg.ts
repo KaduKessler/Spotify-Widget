@@ -9,15 +9,38 @@ type TrackInfo = {
 export function renderSvg(
   track: TrackInfo,
   theme: 'dark' | 'light',
-  opts?: { spin?: boolean; rainbow?: boolean; scanCodeSrc?: string },
+  opts?: {
+    spin?: boolean
+    rainbow?: boolean
+    scanCodeSrc?: string
+    bg?: string // hex sem '#', ou 'transparent'
+    textColor?: string // hex sem '#'
+    scale?: number
+  },
 ) {
   const width = 495
   const height = 160
-  const bg = theme === 'dark' ? '#151b23' : '#ffffff'
-  const textPrimary = theme === 'dark' ? '#FFFFFF' : '#161B22'
-  const textSecondary =
-    theme === 'dark' ? 'rgba(240,248,255,0.66)' : 'rgba(22,27,34,0.66)'
-  // const accent = '#1DB954' // não utilizado após remover o ícone
+  const outWidth = width * (opts?.scale ?? 1)
+  const outHeight = height * (opts?.scale ?? 1)
+
+  const bgTransparent = opts?.bg === 'transparent'
+  const bg = bgTransparent
+    ? 'none'
+    : opts?.bg
+      ? `#${opts.bg}`
+      : theme === 'dark'
+        ? '#151b23'
+        : '#ffffff'
+  const textPrimary = opts?.textColor
+    ? `#${opts.textColor}`
+    : theme === 'dark'
+      ? '#FFFFFF'
+      : '#161B22'
+  const textSecondary = opts?.textColor
+    ? hexToRgba(opts.textColor, 0.66)
+    : theme === 'dark'
+      ? 'rgba(240,248,255,0.66)'
+      : 'rgba(22,27,34,0.66)'
 
   const cover = track.cover_url ?? 'https://placehold.co/400x400/png'
 
@@ -43,7 +66,7 @@ export function renderSvg(
   const eqLeftX = centerX - Math.floor(totalBarsWidth / 2)
 
   return `
-<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<svg width="${outWidth}" height="${outHeight}" viewBox="0 0 ${width} ${height}" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
 
   <defs>
     <mask id="cover-mask">
@@ -54,7 +77,7 @@ export function renderSvg(
     </filter>
   </defs>
 
-  <rect width="${width}" height="${height}" rx="8" fill="${bg}" filter="url(#card-shadow)"/>
+  <rect width="${width}" height="${height}" rx="8" fill="${bg}" ${bgTransparent ? '' : 'filter="url(#card-shadow)"'}/>
 
   <!-- Barras do equalizer alinhadas com a base da capa -->
   ${renderEq(eqLeftX, 110, theme, opts?.rainbow)}
@@ -153,6 +176,13 @@ function renderEq(
   }
 
   return bars.join('\n')
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  const r = Number.parseInt(hex.slice(0, 2), 16)
+  const g = Number.parseInt(hex.slice(2, 4), 16)
+  const b = Number.parseInt(hex.slice(4, 6), 16)
+  return `rgba(${r},${g},${b},${alpha})`
 }
 
 function escapeXml(str: string): string {

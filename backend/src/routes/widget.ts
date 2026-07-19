@@ -182,6 +182,9 @@ export async function registerWidgetRoute(app: FastifyInstance) {
       scan?: string
       theme?: 'dark' | 'light'
       rainbow?: string
+      bg?: string
+      color?: string
+      scale?: string
     }
     const sessionUsername = (req as FastifyRequest).username as
       | string
@@ -212,6 +215,21 @@ export async function registerWidgetRoute(app: FastifyInstance) {
     const spin = query.spin === '1' || query.spin === 'true'
     const rainbow = query.rainbow === '1' || query.rainbow === 'true'
     const themeOverride = query.theme
+
+    const hexRe = /^[0-9a-fA-F]{6}$/
+    const bgOverride =
+      query.bg === 'transparent'
+        ? 'transparent'
+        : query.bg && hexRe.test(query.bg)
+          ? query.bg
+          : undefined
+    const colorOverride =
+      query.color && hexRe.test(query.color) ? query.color : undefined
+    const parsedScale = query.scale ? Number.parseFloat(query.scale) : NaN
+    const scaleOverride =
+      Number.isFinite(parsedScale) && parsedScale >= 0.5 && parsedScale <= 3
+        ? parsedScale
+        : undefined
 
     if (username) {
       const user = await getUserByUsername(username)
@@ -315,12 +333,18 @@ export async function registerWidgetRoute(app: FastifyInstance) {
           spin?: boolean | undefined
           rainbow?: boolean | undefined
           scanCodeSrc?: string | undefined
+          bg?: string | undefined
+          textColor?: string | undefined
+          scale?: number | undefined
         },
       ) => string
     )(track, config.theme, {
       spin,
       rainbow,
       scanCodeSrc,
+      bg: bgOverride,
+      textColor: colorOverride,
+      scale: scaleOverride,
     })
 
     reply

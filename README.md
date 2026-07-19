@@ -1,48 +1,80 @@
 # Spotify Widget
 
-Widget SVG dinâmico mostrando sua música atual ou favorita do Spotify, perfeito para README do GitHub.
+Widget SVG dinâmico mostrando sua música atual ou favorita do Spotify — para README do GitHub, site pessoal ou qualquer lugar que aceite `<img>`. Vem com um painel de administração completo (multi-usuário, RBAC, whitelist de convite) pra quem quiser hospedar pra mais de uma pessoa.
 
 ## ✨ Funcionalidades
 
-- 🎵 **Now Playing**: Exibe a música que você está ouvindo em tempo real
-- 📌 **Track Fixa**: Fixe uma música específica para exibir sempre
-- 🎨 **Temas**: Dark e Light
-- 🔒 **Privacidade**: Controle total sobre dados públicos
-- 👥 **Multi-usuário**: Sistema completo de RBAC (Role-Based Access Control)
-- 🔐 **Múltiplos Providers**: Autenticação por senha, GitHub OAuth ou modo público
+- 🎵 **Now Playing**: exibe a música que você está ouvindo em tempo real
+- 📌 **Track fixa**: fixa uma música específica pra exibir sempre
+- 🎨 **Aparência customizável**: tema (dark/light), fundo (padrão/transparente/cor sólida), cor do texto e escala — tudo via query param, sem precisar salvar
+- 🔒 **Privacidade**: toggle pra expor/ocultar o JSON público a qualquer momento
+- 👥 **Multi-usuário**: RBAC completo (admin / user / viewer)
+- 🔐 **Múltiplos providers**: senha, GitHub OAuth ou modo público — pode combinar
+- 🐳 **Deploy em 1 comando**: `docker compose up --build -d`, zero config obrigatório
+
+## 🗺️ Como as peças se encaixam
+
+```mermaid
+flowchart LR
+    subgraph client["Quem consome o widget"]
+        gh["README do GitHub<br/>ou site pessoal"]
+    end
+
+    subgraph app["spotify-widget (1 container)"]
+        admin["Admin SPA<br/>React + Vite"]
+        api["Backend<br/>Fastify"]
+        db[("SQLite<br/>via Prisma")]
+    end
+
+    browser["Você, no navegador"]
+    spotify["Spotify Web API"]
+    github["GitHub OAuth"]
+
+    gh -- "GET /widget<br/>GET /user/api/:user" --> api
+    browser -- "/admin/*" --> admin
+    admin -- "fetch /api/*" --> api
+    api --> db
+    api -- "now playing / faixa" --> spotify
+    api -- "login" --> github
+```
+
+O backend serve as duas coisas: a rota pública `/widget` (o SVG) e o painel `/admin` (a SPA que você usa pra configurar tudo). Cada usuário guarda suas próprias credenciais do Spotify no banco — não existe client ID/secret "global" no `.env`.
 
 ## 🚀 Quick Start
 
+A forma mais rápida de rodar é via Docker — veja a seção "🐳 Docker Quickstart" mais abaixo, sobe com 1 comando e sem `.env`.
+
+Pra rodar direto na máquina (sem Docker):
+
 ### Requisitos
 
-- Node.js 18+
+- Node.js 22+
 - pnpm
-- Conta Spotify Developer (para modo Now Playing)
+- Conta Spotify Developer (opcional, só pro modo Now Playing)
 
 ### Instalação
 
 ```bash
-# Clone o repositório
-git clone https://github.com/your-username/spotify-widget.git
-cd spotify-widget
+git clone https://github.com/KaduKessler/Spotify-Readme.git
+cd Spotify-Readme
 
-# Configure variáveis de ambiente na raiz
-cp .env.example .env
-
-# Rode o script de setup (instala deps, gera SESSION_SECRET, migra DB)
-bash ./script.sh
-
-# Ou manualmente:
 pnpm install
-cd backend && pnpm exec prisma migrate dev
 
-# Inicie backend + admin simultaneamente
+# Configure o .env do backend
+cp backend/.env.example backend/.env
+# edite backend/.env com suas variáveis (veja abaixo)
+
+cd backend && pnpm exec prisma migrate dev && cd ..
+
+# Inicia backend (porta 3000) + admin (porta 5173) juntos
 pnpm dev
 ```
 
+Acesse `http://127.0.0.1:5173` pra usar o painel em dev (proxy pro backend embutido), ou `http://127.0.0.1:3000/widget` pra ver o SVG puro.
+
 ### Configuração Básica
 
-Edite `.env` na raiz do projeto:
+Edite `backend/.env` (é aí que o backend lê, não na raiz):
 
 ```env
 # Autenticação (escolha um ou mais)
@@ -51,19 +83,21 @@ ENABLE_GITHUB_AUTH=false
 ENABLE_NONE_AUTH=false
 
 # Admin inicial (para password auth)
-ADMIN_USERNAME=admin
+ADMIN_USERNAME=seu_usuario
 ADMIN_PASSWORD=senha_forte_aqui
-
-# Spotify (opcional para Now Playing)
-SPOTIFY_CLIENT_ID=seu_client_id
-SPOTIFY_CLIENT_SECRET=seu_client_secret
-SPOTIFY_REDIRECT_URI=http://127.0.0.1:3000/auth/spotify/callback
 
 # GitHub OAuth (se ENABLE_GITHUB_AUTH=true)
 GITHUB_CLIENT_ID=seu_github_client_id
 GITHUB_CLIENT_SECRET=seu_github_client_secret
-GITHUB_CALLBACK_URL=http://127.0.0.1:3000/auth/github/callback
+
+# URLs (o callback do GitHub OAuth é montado a partir de APP_URL)
+APP_URL=http://127.0.0.1:3000
+ADMIN_URL=http://127.0.0.1:5173
+
+SESSION_SECRET=gere_com_openssl_rand_hex_32
 ```
+
+> Credenciais do Spotify (Client ID/Secret) **não vão no `.env`** — cada usuário cadastra as suas próprias na aba Configuração do painel, depois de logar.
 
 ## 🔐 Sistema de Autenticação e RBAC
 
@@ -75,7 +109,7 @@ O sistema suporta **múltiplos providers simultâneos**:
 
 ```env
 ENABLE_PASSWORD_AUTH=true
-ADMIN_USERNAME=admin
+ADMIN_USERNAME=seu_usuario
 ADMIN_PASSWORD=sua_senha
 ```
 
@@ -89,8 +123,9 @@ ADMIN_PASSWORD=sua_senha
 ENABLE_GITHUB_AUTH=true
 GITHUB_CLIENT_ID=...
 GITHUB_CLIENT_SECRET=...
-GITHUB_CALLBACK_URL=http://127.0.0.1:3000/auth/github/callback
 ```
+
+O callback (`{APP_URL}/auth/github/callback`) é montado automaticamente a partir de `APP_URL` — não existe uma variável separada pra ele. Registre essa URL no OAuth App do GitHub.
 
 - Autenticação via GitHub OAuth
 - Cria conta automaticamente no primeiro login (respeitando política de registro)
@@ -182,34 +217,41 @@ Se `false`, apenas o admin inicial do env pode logar (mais restritivo).
 
 ## 🎛 Painel Administrativo
 
-Acesse `/admin` após autenticar-se.
+Acesse `/admin` após autenticar-se. Três abas:
 
 ### Aba "Configuração"
 
-- **Modo**: Now Playing ou Track Fixa
+Editor único: o preview do widget e os controles ficam lado a lado, muda algo e vê o resultado na hora.
+
+- **Modo**: Now Playing ou Track fixa
 - **Tema**: Dark ou Light
-- **Track ID**: ID ou URL do Spotify para modo fixo
-- **Privacidade**: Toggle para expor/ocultar JSON público
-- **Spotify API**: Configure credenciais pessoais
-- **Now Playing**: Conecte sua conta Spotify
+- **Aparência**: fundo (padrão/transparente/cor), cor do texto, tamanho (50%–300%) — reflete no preview sem precisar salvar, e vira parte da URL de embed
+- **Privacidade**: toggle pra expor/ocultar o JSON público (modal "Flags")
+- **Embed**: copia pronto em Markdown, HTML ou URL direta
+- **Integração Spotify**: credenciais pessoais (Client ID/Secret) + conectar/desconectar conta + status "tocando agora" (quando modo é Track fixa, pra referência)
 
 ### Aba "Usuários" (admin only)
 
-Gerenciamento completo de usuários:
+- Lista usuários, provider, role e data de criação, com busca
+- Criar usuário novo (senha + role)
+- Editar role de qualquer usuário
+- Redefinir senha de usuários locais (`provider=password`)
 
-- **Listar usuários**: Veja todos os usuários, providers, roles e data de criação
-- **Criar usuário**: Adicione novo usuário com senha (escolha role: admin/user/viewer)
-- **Editar role**: Altere permissões de qualquer usuário
-- **Redefinir senha**: Altere a senha de usuários locais (provider=password)
+### Aba "Whitelist GitHub" (admin only)
 
-Apenas admins veem esta aba.
+Só aparece com `REGISTRATION_POLICY=github_whitelist`. Gerencia quem pode criar conta via GitHub OAuth:
+
+- Adicionar 1 usuário (com validação opcional contra a API do GitHub) ou em lote (colar vários, um por linha)
+- Buscar, ver quem adicionou e quando, remover (soft-delete com auditoria)
 
 ## 🛠 API Endpoints
 
 ### Públicos
 
-- `GET /widget?user=username` - SVG do widget (tema via query param opcional)
-- `GET /user/api/:username` - JSON com track atual (respeita privacidade)
+- `GET /widget?user=username` - SVG do widget (veja query params na seção "🎨 Uso do Widget")
+- `GET /user/api/:username` - JSON com a track atual (respeita a flag de privacidade)
+- `GET /health` - healthcheck
+- `GET /ready` - readiness check
 
 ### Autenticação
 
@@ -254,10 +296,27 @@ Apenas admins veem esta aba.
 <img src="https://seu-dominio.com/widget?user=seu_username" alt="Spotify Widget" />
 ```
 
-### Com tema personalizado
+O jeito mais fácil de montar essa URL é copiar direto do painel (aba Configuração → Embed) — ele já monta com a aparência que você escolheu.
+
+### Query params disponíveis
+
+| Param | Valores | Efeito |
+| --- | --- | --- |
+| `user` | username | qual usuário exibir (obrigatório fora do painel) |
+| `theme` | `dark` \| `light` | sobrescreve o tema salvo |
+| `bg` | hex sem `#`, ou `transparent` | cor de fundo customizada |
+| `color` | hex sem `#` | cor do texto customizada |
+| `scale` | `0.5` a `3` | escala do widget (1 = tamanho original 495×160) |
+| `spin` | `1` \| `true` | anima a capa do álbum girando |
+| `rainbow` | `1` \| `true` | equalizer com cores em arco-íris |
+| `scan` | `1` \| `true` | mostra o scan code do Spotify (abre a faixa no app) |
 
 ```markdown
+<!-- tema light -->
 ![Spotify](https://seu-dominio.com/widget?user=seu_username&theme=light)
+
+<!-- fundo transparente, texto branco, 150% do tamanho -->
+![Spotify](https://seu-dominio.com/widget?user=seu_username&bg=transparent&color=ffffff&scale=1.5)
 ```
 
 ## 🔒 Privacidade
@@ -272,41 +331,44 @@ O toggle **"Expor dados no JSON público"** na aba Flags controla:
 ## 📦 Estrutura do Projeto
 
 ```text
-spotify-widget/
-├── .env              # Variáveis de ambiente (raiz)
-├── .env.example      # Template de variáveis
-├── script.sh         # Setup automático
-├── docker-compose.yml # Docker setup
-├── backend/          # Servidor Fastify + Prisma
+Spotify-Readme/
+├── Dockerfile             # Build multi-stage (admin + backend num container)
+├── docker-compose.yml     # Deploy em 1 comando
+├── docker-entrypoint.sh   # Migrations + geração de secrets na 1ª execução
+├── backend/               # Servidor Fastify + Prisma
+│   ├── .env               # Variáveis de ambiente (lido daqui, não da raiz)
+│   ├── .env.example       # Template de variáveis
 │   ├── src/
-│   │   ├── routes/   # Endpoints
-│   │   ├── lib/      # DB, config, auth helpers
-│   │   └── plugins/  # Auth plugin
-│   ├── prisma/       # Schema e migrations
-│   └── data/         # SQLite (gitignored)
-├── admin/            # Frontend React + Vite
-│   ├── .env.local    # Variáveis frontend (VITE_*)
+│   │   ├── routes/        # Endpoints
+│   │   ├── lib/           # DB, config, auth helpers
+│   │   └── plugins/       # Auth plugin
+│   ├── prisma/            # Schema e migrations
+│   └── data/               # SQLite (gitignored)
+├── admin/                 # Frontend React + Vite
+│   ├── .env.local          # Variáveis frontend (VITE_*)
 │   └── src/
-│       ├── components/  # UsersPanel, etc
-│       └── App.tsx      # Main UI
-└── TODO.md           # Roadmap
+│       ├── components/     # WidgetEditorCard, UsersPanel, etc
+│       └── App.tsx         # Orquestra estado + composição das telas
+└── TODO.md                 # Roadmap
 ```
 
 ## 🧪 Desenvolvimento
+
+```bash
+# Backend + admin juntos, a partir da raiz
+pnpm dev
+```
+
+Ou separado:
 
 ### Backend
 
 ```bash
 cd backend
 
-# Dev mode com hot reload
-pnpm dev
-
-# Compilar
-pnpm build
-
-# Prisma Studio (GUI do banco)
-pnpm exec prisma studio
+pnpm dev              # hot reload (tsx watch), porta 3000
+pnpm build             # compila pra dist/
+pnpm exec prisma studio  # GUI do banco
 ```
 
 ### Frontend
@@ -314,33 +376,9 @@ pnpm exec prisma studio
 ```bash
 cd admin
 
-# Dev server (proxy para backend em 3000)
-pnpm dev
-
-# Build produção
-pnpm build
+pnpm dev     # dev server com proxy pro backend, porta 5173
+pnpm build   # build de produção
 ```
-
-## ⚙️ Setup Automático
-
-Para acelerar a configuração local, use o script de setup na raiz:
-
-```bash
-# macOS/Linux ou Windows com Git Bash/WSL
-bash ./script.sh
-
-# Em seguida, inicie ambos os serviços
-pnpm dev
-```
-
-O script:
-
-- Cria `.env` na raiz (a partir de `.env.example` ou com defaults) e gera `SESSION_SECRET` automaticamente.
-- Cria `admin/.env.local` com `VITE_BACKEND_URL=http://127.0.0.1:3000`.
-- Executa `pnpm install` na raiz.
-- Roda `prisma migrate dev` no backend.
-
-**Nota:** O arquivo `.env` fica na **raiz do projeto**, não dentro de `backend/`. O backend lê automaticamente o `.env` da raiz.
 
 ## 🐳 Docker Quickstart
 
@@ -400,8 +438,10 @@ docker compose build --no-cache  # forçar rebuild ignorando cache
 
 ## 📝 Variáveis de Ambiente Completas
 
+Tudo lido de `backend/.env` (ou injetado direto como env var, no caso do Docker). Não existe `PORT`/`HOST` configurável — o servidor sempre sobe em `0.0.0.0:3000` — nem credencial global de Spotify: cada usuário guarda a sua própria no painel, não no `.env`.
+
 ```env
-# === Auth Providers ===
+# === Auth Providers (habilite 1 ou mais) ===
 ENABLE_PASSWORD_AUTH=true
 ENABLE_GITHUB_AUTH=false
 ENABLE_NONE_AUTH=false
@@ -411,34 +451,32 @@ REGISTRATION_POLICY=open  # open | github_whitelist | invite_only | closed
 ALLOW_PASSWORD_SIGNUP=true
 
 # === Admin Config ===
-ADMIN_USERS=admin,user1,user2
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=senha_forte
+ADMIN_USERS=user1,user2       # sempre recebem role admin, além do ADMIN_USERNAME
+ADMIN_USERNAME=seu_usuario    # não pode ser literalmente "admin" (bloqueado por segurança)
+ADMIN_PASSWORD=senha_forte    # mínimo 8 caracteres, não pode ser "admin"
 
-# === GitHub OAuth ===
+# === GitHub OAuth (se ENABLE_GITHUB_AUTH=true) ===
 GITHUB_CLIENT_ID=seu_github_client_id
 GITHUB_CLIENT_SECRET=seu_github_secret
-GITHUB_CALLBACK_URL=http://127.0.0.1:3000/auth/github/callback
-GITHUB_WHITELIST=user1,user2  # Para REGISTRATION_POLICY=github_whitelist
+GITHUB_WHITELIST=user1,user2  # para REGISTRATION_POLICY=github_whitelist
 
-# === Spotify (Global Fallback) ===
-SPOTIFY_CLIENT_ID=seu_spotify_client_id
-SPOTIFY_CLIENT_SECRET=seu_spotify_secret
-SPOTIFY_REDIRECT_URI=http://127.0.0.1:3000/auth/spotify/callback
+# === URLs ===
+# O callback do GitHub OAuth é montado como {APP_URL}/auth/github/callback
+APP_URL=http://127.0.0.1:3000
+ADMIN_URL=http://127.0.0.1:5173
 
 # === Session ===
-SESSION_SECRET=chave_aleatoria_segura_aqui
-
-# === Server ===
-PORT=3000
-HOST=127.0.0.1
+SESSION_SECRET=chave_aleatoria_segura_aqui  # min. 32 chars em produção; gere com: openssl rand -hex 32
 
 # === Security Headers ===
 # Ative Helmet em produção para enviar headers de segurança.
 # Se você usa um reverse proxy (Nginx Proxy Manager/Cloudflare) que já envia HSTS,
-# desative apenas o HSTS do app para evitar duplicações.
-ENABLE_HELMET=true            
-HELMET_DISABLE_HSTS=true      
+# desative apenas o HSTS do app pra evitar duplicação.
+ENABLE_HELMET=true
+HELMET_DISABLE_HSTS=true
+
+# === Database ===
+DATABASE_URL=file:./data/db.sqlite
 ```
 
 ## 🤝 Contribuindo

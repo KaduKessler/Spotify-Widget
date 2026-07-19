@@ -220,10 +220,10 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 
 ### Documentation
 
-- [ ] README.md completo
-- [ ] DEPLOYMENT.md (como hospedar self-hosted)
+- [x] README.md completo (revisado contra o código real, com diagrama Mermaid)
+- [x] Como hospedar self-hosted (coberto na seção "🐳 Docker Quickstart" do README, sem arquivo separado)
 - [ ] API.md (documentar endpoints)
-- [ ] ARCHITECTURE.md (diagrama de fluxo)
+- [x] Diagrama de fluxo (Mermaid, embutido no README, sem arquivo ARCHITECTURE.md separado)
 
 ---
 

@@ -1,9 +1,10 @@
-import { Edit, Lock, Plus, X } from 'lucide-react'
+import { Edit, Lock, Plus, Search } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { postJson, putJson, requestJson } from '../api/client'
 import Button from './Button'
 import type { DataTableColumn } from './DataTable'
 import DataTable from './DataTable'
+import ModalShell from './ModalShell'
 import Segmented from './Segmented'
 
 type Role = 'admin' | 'user' | 'viewer'
@@ -38,41 +39,6 @@ function RoleBadge({ role }: { role: Role }) {
   )
 }
 
-function ModalShell({
-  title,
-  onClose,
-  children,
-}: {
-  title: string
-  onClose: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <button
-        type="button"
-        aria-label="Fechar"
-        className="modal-backdrop-in absolute inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div className="modal-panel-in relative z-10 w-full max-w-md space-y-4 rounded-2xl border border-white/10 bg-neutral-950/95 p-6 shadow-2xl">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="text-lg font-semibold text-white">{title}</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Fechar"
-            className="rounded-xl border border-white/10 bg-white/5 p-1.5 text-neutral-200 transition-all duration-150 hover:border-emerald-400/60 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70"
-          >
-            <X aria-hidden="true" className="w-4 h-4" />
-          </button>
-        </div>
-        {children}
-      </div>
-    </div>
-  )
-}
-
 function FieldLabel({
   children,
   htmlFor,
@@ -94,6 +60,9 @@ export default function UsersPanel() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Search filter
+  const [searchQuery, setSearchQuery] = useState('')
 
   // Create user modal
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -207,6 +176,10 @@ export default function UsersPanel() {
     }
   }
 
+  const filteredUsers = users.filter((user) =>
+    user.username.toLowerCase().includes(searchQuery.toLowerCase()),
+  )
+
   const columns: DataTableColumn<User>[] = [
     {
       key: 'username',
@@ -257,7 +230,7 @@ export default function UsersPanel() {
               setUpdateError(null)
             }}
           >
-            Editar Role
+            Editar Função
           </Button>
           {user.provider === 'password' && (
             <Button
@@ -305,6 +278,20 @@ export default function UsersPanel() {
         </Button>
       </div>
 
+      <div className="relative">
+        <Search
+          aria-hidden="true"
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500"
+        />
+        <input
+          type="text"
+          placeholder="Buscar usuário..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className={`${inputClass} pl-9`}
+        />
+      </div>
+
       {error && (
         <div className="rounded-xl border border-red-500/40 bg-red-900/40 px-3 py-2 text-xs text-red-100">
           {error}
@@ -313,9 +300,13 @@ export default function UsersPanel() {
 
       <DataTable
         columns={columns}
-        data={users}
+        data={filteredUsers}
         loading={loading}
-        emptyMessage="Nenhum usuário encontrado."
+        emptyMessage={
+          searchQuery
+            ? `Nenhum resultado para "${searchQuery}"`
+            : 'Nenhum usuário encontrado.'
+        }
         rowKey="id"
       />
 

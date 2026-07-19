@@ -19,7 +19,7 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`px-4 py-2 text-sm font-semibold rounded-t-lg transition whitespace-nowrap ${
+      className={`whitespace-nowrap rounded-t-lg px-4 py-2 text-sm font-semibold transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70 ${
         active
           ? 'bg-white/5 border-b-2 border-emerald-400 text-white'
           : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/5'

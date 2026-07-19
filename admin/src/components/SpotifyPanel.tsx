@@ -101,7 +101,7 @@ export default function SpotifyPanel({
               <input
                 id="spotify-client-id"
                 type="text"
-                className="w-full rounded-xl border border-neutral-700/80 bg-neutral-900/80 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/70 transition"
+                className="w-full rounded-xl border border-white/10 bg-neutral-900/80 px-3 py-2.5 text-sm transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70"
                 value={spotifyClientId}
                 onChange={(e) => onClientIdChange(e.target.value)}
                 placeholder="Seu Spotify Client ID"
@@ -118,7 +118,7 @@ export default function SpotifyPanel({
               <input
                 id="spotify-client-secret"
                 type="password"
-                className="w-full rounded-xl border border-neutral-700/80 bg-neutral-900/80 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/70 transition font-mono"
+                className="w-full rounded-xl border border-white/10 bg-neutral-900/80 px-3 py-2.5 text-sm font-mono transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70"
                 value={spotifyClientSecret}
                 onChange={(e) => onClientSecretChange(e.target.value)}
                 placeholder={

@@ -1,4 +1,4 @@
-# Spotify Readme Widget
+# Spotify Widget
 
 Widget SVG dinâmico mostrando sua música atual ou favorita do Spotify, perfeito para README do GitHub.
 
@@ -23,8 +23,8 @@ Widget SVG dinâmico mostrando sua música atual ou favorita do Spotify, perfeit
 
 ```bash
 # Clone o repositório
-git clone https://github.com/your-username/spotify-readme.git
-cd spotify-readme
+git clone https://github.com/your-username/spotify-widget.git
+cd spotify-widget
 
 # Configure variáveis de ambiente na raiz
 cp .env.example .env
@@ -272,7 +272,7 @@ O toggle **"Expor dados no JSON público"** na aba Flags controla:
 ## 📦 Estrutura do Projeto
 
 ```text
-spotify-readme/
+spotify-widget/
 ├── .env              # Variáveis de ambiente (raiz)
 ├── .env.example      # Template de variáveis
 ├── script.sh         # Setup automático

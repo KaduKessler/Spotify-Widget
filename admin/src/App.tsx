@@ -441,7 +441,7 @@ export default function App() {
           hero={
             <>
               <h1 className="text-3xl font-semibold leading-tight text-white">
-                Spotify Readme Admin
+                Spotify Widget Admin
               </h1>
               <p className="text-sm text-neutral-300">
                 Escolha como entrar para ajustar o widget.
@@ -758,7 +758,7 @@ export default function App() {
               <p className="text-[11px] uppercase tracking-[0.28em] text-emerald-200/80">
                 Dashboard
               </p>
-              <h1 className="text-2xl font-semibold">Spotify Readme</h1>
+              <h1 className="text-2xl font-semibold">Spotify Widget</h1>
             </div>
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-2 py-1">

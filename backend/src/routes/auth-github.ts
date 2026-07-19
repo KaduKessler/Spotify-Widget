@@ -96,7 +96,7 @@ export async function registerGithubAuthRoutes(app: FastifyInstance) {
       headers: {
         Accept: 'application/vnd.github+json',
         Authorization: `Bearer ${accessToken}`,
-        'User-Agent': 'spotify-readme',
+        'User-Agent': 'spotify-widget',
       },
     })
 

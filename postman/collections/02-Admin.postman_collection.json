@@ -405,7 +405,7 @@
             "header": [
               {
                 "key": "User-Agent",
-                "value": "Spotify-Readme-Admin"
+                "value": "Spotify-Widget-Admin"
               },
               {
                 "key": "Accept",

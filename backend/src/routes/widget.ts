@@ -184,7 +184,7 @@ export async function registerWidgetRoute(app: FastifyInstance) {
     }
 
     let track: WidgetTrack = {
-      name: 'Spotify Readme Widget',
+      name: 'Spotify Widget',
       artist: 'Configure no painel',
     }
 

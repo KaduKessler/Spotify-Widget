@@ -1,6 +1,6 @@
-# Postman Collections - Spotify Readme
+# Postman Collections - Spotify Widget
 
-Collections completas da API do Spotify Readme para testes e desenvolvimento.
+Collections completas da API do Spotify Widget para testes e desenvolvimento.
 
 ## 📁 Estrutura
 

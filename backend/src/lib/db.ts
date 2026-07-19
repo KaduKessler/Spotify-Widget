@@ -220,7 +220,7 @@ export async function validateGitHubUserExists(username: string): Promise<boolea
   try {
     const response = await fetch(`https://api.github.com/users/${encodeURIComponent(username)}`, {
       headers: {
-        'User-Agent': 'Spotify-Readme-Admin',
+        'User-Agent': 'Spotify-Widget-Admin',
         'Accept': 'application/vnd.github.v3+json',
       },
     })

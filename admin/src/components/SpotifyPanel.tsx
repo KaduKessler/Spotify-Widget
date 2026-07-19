@@ -1,3 +1,5 @@
+import { ExternalLink, Music, RefreshCw, Trash2, Unlink } from 'lucide-react'
+
 type NowPlaying = {
   isPlaying: boolean
   track: {
@@ -145,8 +147,9 @@ export default function SpotifyPanel({
                   type="button"
                   onClick={onClear}
                   disabled={savingSpotify}
-                  className="rounded-xl border border-red-400/40 bg-red-500/15 px-4 py-2.5 text-sm font-semibold text-red-100 hover:bg-red-500/25 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-2 rounded-xl border border-red-400/40 bg-red-500/15 px-4 py-2.5 text-sm font-semibold text-red-100 hover:bg-red-500/25 transition disabled:opacity-60 disabled:cursor-not-allowed"
                 >
+                  <Trash2 aria-hidden="true" className="w-4 h-4" />
                   Limpar
                 </button>
               )}
@@ -183,8 +186,9 @@ export default function SpotifyPanel({
                   type="button"
                   onClick={onDisconnect}
                   disabled={loadingSpotifyStatus}
-                  className="w-full rounded-xl border border-red-400/40 bg-red-500/15 px-4 py-2.5 text-sm font-semibold text-red-100 hover:bg-red-500/25 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-400/40 bg-red-500/15 px-4 py-2.5 text-sm font-semibold text-red-100 hover:bg-red-500/25 transition disabled:opacity-60 disabled:cursor-not-allowed"
                 >
+                  <Unlink aria-hidden="true" className="w-4 h-4" />
                   {loadingSpotifyStatus
                     ? 'Desconectando...'
                     : 'Desconectar Spotify'}
@@ -193,8 +197,9 @@ export default function SpotifyPanel({
                 <button
                   type="button"
                   onClick={onConnect}
-                  className="w-full rounded-xl bg-[#1DB954] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1ed760] transition shadow-lg shadow-[#1DB954]/25"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#1DB954] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1ed760] transition shadow-lg shadow-[#1DB954]/25"
                 >
+                  <Music aria-hidden="true" className="w-4 h-4" />
                   Conectar com Spotify
                 </button>
               )}
@@ -215,8 +220,12 @@ export default function SpotifyPanel({
                 type="button"
                 onClick={onRefreshNowPlaying}
                 disabled={loadingNowPlaying}
-                className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs hover:bg-white/10 transition disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs hover:bg-white/10 transition disabled:opacity-50"
               >
+                <RefreshCw
+                  aria-hidden="true"
+                  className={`w-3 h-3 ${loadingNowPlaying ? 'animate-spin' : ''}`}
+                />
                 {loadingNowPlaying ? 'Carregando...' : 'Atualizar'}
               </button>
             </div>
@@ -265,9 +274,10 @@ export default function SpotifyPanel({
                   href={nowPlaying.track.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="block w-full rounded-xl bg-[#1DB954] px-4 py-2 text-center text-sm font-semibold text-white hover:bg-[#1ed760] transition"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#1DB954] px-4 py-2 text-center text-sm font-semibold text-white hover:bg-[#1ed760] transition"
                 >
                   Abrir no Spotify
+                  <ExternalLink aria-hidden="true" className="w-4 h-4" />
                 </a>
               </div>
             ) : (

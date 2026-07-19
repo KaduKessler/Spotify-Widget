@@ -1,3 +1,5 @@
+import { X } from 'lucide-react'
+
 export type FlagsModalProps = {
   open: boolean
   onClose: () => void
@@ -40,9 +42,10 @@ export default function FlagsModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-xs text-neutral-200 hover:border-emerald-400/60"
+            aria-label="Fechar"
+            className="rounded-xl border border-white/10 bg-white/5 p-1.5 text-neutral-200 hover:border-emerald-400/60"
           >
-            Fechar
+            <X aria-hidden="true" className="w-4 h-4" />
           </button>
         </div>
 

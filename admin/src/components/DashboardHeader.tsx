@@ -1,3 +1,5 @@
+import { ExternalLink, LogOut } from 'lucide-react'
+
 type RegistrationPolicy = 'open' | 'github_whitelist' | 'invite_only' | 'closed'
 
 const policyLabels: Record<RegistrationPolicy, string> = {
@@ -47,9 +49,10 @@ export default function DashboardHeader({
             href={jsonUrl}
             target="_blank"
             rel="noreferrer"
-            className="rounded-full px-2 py-1 hover:text-emerald-300 hover:bg-white/5 transition-colors"
+            className="inline-flex items-center gap-1 rounded-full px-2 py-1 hover:text-emerald-300 hover:bg-white/5 transition-colors"
           >
             JSON
+            <ExternalLink aria-hidden="true" className="w-3 h-3" />
           </a>
           <span className="text-neutral-600">·</span>
           <span className="whitespace-nowrap">
@@ -80,8 +83,9 @@ export default function DashboardHeader({
             <button
               type="button"
               onClick={onLogout}
-              className="rounded-full border border-red-400/40 bg-red-500/15 px-3 py-1 text-[11px] text-red-100 hover:bg-red-500/25 transition-colors"
+              className="inline-flex items-center gap-1 rounded-full border border-red-400/40 bg-red-500/15 px-3 py-1 text-[11px] text-red-100 hover:bg-red-500/25 transition-colors"
             >
+              <LogOut aria-hidden="true" className="w-3 h-3" />
               Sair
             </button>
           )}

@@ -1,3 +1,5 @@
+import { Check, Copy, ExternalLink } from 'lucide-react'
+
 export type WidgetPreviewCardProps = {
   widgetUrl: string
   previewUrl: string
@@ -57,23 +59,34 @@ export default function WidgetPreviewCard({
         <button
           type="button"
           onClick={onCopyEmbed}
-          className={`max-w-[320px] truncate text-left rounded-lg border px-2 py-1 transition cursor-pointer font-mono ${copiedEmbed ? 'border-emerald-400/70 bg-emerald-500/15 text-emerald-100' : 'border-white/10 bg-white/5 hover:border-emerald-400/60'}`}
+          className={`inline-flex max-w-[320px] items-center gap-1.5 truncate text-left rounded-lg border px-2 py-1 transition cursor-pointer font-mono ${copiedEmbed ? 'border-emerald-400/70 bg-emerald-500/15 text-emerald-100' : 'border-white/10 bg-white/5 hover:border-emerald-400/60'}`}
         >
+          {copiedEmbed ? (
+            <Check aria-hidden="true" className="w-3 h-3 shrink-0" />
+          ) : (
+            <Copy aria-hidden="true" className="w-3 h-3 shrink-0" />
+          )}
           {copiedEmbed ? 'Copiado!' : `<img src="${previewUrl}" />`}
         </button>
         <a
           href={previewUrl}
           target="_blank"
           rel="noreferrer"
-          className="ml-auto rounded-lg border border-white/10 bg-white/5 px-2 py-1 hover:border-emerald-400/60 transition"
+          className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2 py-1 hover:border-emerald-400/60 transition"
         >
           Abrir
+          <ExternalLink aria-hidden="true" className="w-3 h-3" />
         </a>
         <button
           type="button"
           onClick={onCopyUrl}
-          className={`rounded-lg border px-2 py-1 transition cursor-pointer ${copiedUrl ? 'border-emerald-400/70 bg-emerald-500/15 text-emerald-100' : 'border-white/10 bg-white/5 hover:border-emerald-400/60'}`}
+          className={`inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 transition cursor-pointer ${copiedUrl ? 'border-emerald-400/70 bg-emerald-500/15 text-emerald-100' : 'border-white/10 bg-white/5 hover:border-emerald-400/60'}`}
         >
+          {copiedUrl ? (
+            <Check aria-hidden="true" className="w-3 h-3" />
+          ) : (
+            <Copy aria-hidden="true" className="w-3 h-3" />
+          )}
           {copiedUrl ? 'Copiado!' : 'Copiar URL'}
         </button>
       </div>

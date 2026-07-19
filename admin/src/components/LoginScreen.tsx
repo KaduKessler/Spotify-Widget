@@ -1,5 +1,6 @@
 import { Eye, EyeOff, Github, KeyRound } from 'lucide-react'
 import type { ReactNode } from 'react'
+import Button from './Button'
 
 function LoginShell({
   hero,
@@ -118,13 +119,15 @@ function PasswordLoginCard({
           </div>
         </label>
 
-        <button
+        <Button
           type="submit"
-          disabled={loginLoading}
-          className="w-full rounded-xl bg-linear-to-r from-emerald-400 via-emerald-500 to-cyan-500 text-neutral-900 text-sm font-semibold py-2.5 shadow-lg shadow-emerald-500/25 transition hover:translate-y-px disabled:opacity-60 disabled:cursor-not-allowed"
+          variant="primary"
+          fullWidth
+          loading={loginLoading}
+          loadingText="Entrando..."
         >
-          {loginLoading ? 'Entrando...' : 'Entrar com senha'}
-        </button>
+          Entrar com senha
+        </Button>
       </form>
     </div>
   )

@@ -1,4 +1,5 @@
 import { ExternalLink, Music, RefreshCw, Trash2, Unlink } from 'lucide-react'
+import Button from './Button'
 
 type NowPlaying = {
   isPlaying: boolean
@@ -128,30 +129,27 @@ export default function SpotifyPanel({
             )}
 
             <div className="flex items-center gap-2">
-              <button
+              <Button
                 type="submit"
-                disabled={
-                  savingSpotify || !spotifyClientId || !spotifyClientSecret
-                }
-                className="flex-1 rounded-xl bg-linear-to-r from-emerald-400 via-emerald-500 to-cyan-500 px-4 py-2.5 text-sm font-semibold text-neutral-900 shadow-lg shadow-emerald-500/25 hover:translate-y-px transition disabled:opacity-60 disabled:cursor-not-allowed"
+                variant="primary"
+                className="flex-1"
+                disabled={!spotifyClientId || !spotifyClientSecret}
+                loading={savingSpotify}
+                loadingText="Salvando..."
               >
-                {savingSpotify
-                  ? 'Salvando...'
-                  : spotifyConfig?.configured
-                    ? 'Atualizar'
-                    : 'Salvar'}
-              </button>
+                {spotifyConfig?.configured ? 'Atualizar' : 'Salvar'}
+              </Button>
 
               {spotifyConfig?.configured && (
-                <button
+                <Button
                   type="button"
-                  onClick={onClear}
+                  variant="danger"
+                  icon={<Trash2 className="w-4 h-4" />}
                   disabled={savingSpotify}
-                  className="inline-flex items-center gap-2 rounded-xl border border-red-400/40 bg-red-500/15 px-4 py-2.5 text-sm font-semibold text-red-100 hover:bg-red-500/25 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                  onClick={onClear}
                 >
-                  <Trash2 aria-hidden="true" className="w-4 h-4" />
                   Limpar
-                </button>
+                </Button>
               )}
             </div>
 
@@ -182,26 +180,25 @@ export default function SpotifyPanel({
               </div>
 
               {spotifyConnected ? (
-                <button
-                  type="button"
+                <Button
+                  variant="danger"
+                  fullWidth
+                  icon={<Unlink className="w-4 h-4" />}
+                  loading={loadingSpotifyStatus}
+                  loadingText="Desconectando..."
                   onClick={onDisconnect}
-                  disabled={loadingSpotifyStatus}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-400/40 bg-red-500/15 px-4 py-2.5 text-sm font-semibold text-red-100 hover:bg-red-500/25 transition disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  <Unlink aria-hidden="true" className="w-4 h-4" />
-                  {loadingSpotifyStatus
-                    ? 'Desconectando...'
-                    : 'Desconectar Spotify'}
-                </button>
+                  Desconectar Spotify
+                </Button>
               ) : (
-                <button
-                  type="button"
+                <Button
+                  variant="spotify"
+                  fullWidth
+                  icon={<Music className="w-4 h-4" />}
                   onClick={onConnect}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#1DB954] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1ed760] transition shadow-lg shadow-[#1DB954]/25"
                 >
-                  <Music aria-hidden="true" className="w-4 h-4" />
                   Conectar com Spotify
-                </button>
+                </Button>
               )}
             </div>
           )}
@@ -216,18 +213,15 @@ export default function SpotifyPanel({
                 </p>
                 <h2 className="text-lg font-semibold">Now Playing</h2>
               </div>
-              <button
-                type="button"
+              <Button
+                variant="outline"
+                size="sm"
+                icon={<RefreshCw className="w-3 h-3" />}
+                loading={loadingNowPlaying}
                 onClick={onRefreshNowPlaying}
-                disabled={loadingNowPlaying}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs hover:bg-white/10 transition disabled:opacity-50"
               >
-                <RefreshCw
-                  aria-hidden="true"
-                  className={`w-3 h-3 ${loadingNowPlaying ? 'animate-spin' : ''}`}
-                />
-                {loadingNowPlaying ? 'Carregando...' : 'Atualizar'}
-              </button>
+                Atualizar
+              </Button>
             </div>
 
             {nowPlaying ? (

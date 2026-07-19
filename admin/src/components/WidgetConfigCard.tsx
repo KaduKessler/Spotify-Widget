@@ -1,4 +1,5 @@
-import { Save, ShieldCheck } from 'lucide-react'
+import { ShieldCheck } from 'lucide-react'
+import Button from './Button'
 
 type Config = {
   id: number
@@ -121,23 +122,23 @@ export default function WidgetConfigCard({
             {configError && (
               <span className="text-[11px] text-red-300">{configError}</span>
             )}
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              size="sm"
+              icon={<ShieldCheck className="w-3.5 h-3.5" />}
               onClick={onOpenFlags}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-100 hover:border-emerald-400/60 hover:text-emerald-100 transition"
             >
-              <ShieldCheck aria-hidden="true" className="w-3.5 h-3.5" />
               Flags / Privacidade
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              loading={saving}
+              loadingText="Salvando..."
               onClick={onSave}
-              disabled={saving}
-              className="inline-flex items-center gap-2 rounded-xl bg-linear-to-r from-emerald-400 via-emerald-500 to-cyan-500 px-4 py-2 text-sm font-semibold text-neutral-900 shadow-lg shadow-emerald-500/25 hover:translate-y-px transition disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <Save aria-hidden="true" className="w-4 h-4" />
-              {saving ? 'Salvando...' : 'Salvar'}
-            </button>
+              Salvar
+            </Button>
           </div>
         </div>
       </div>

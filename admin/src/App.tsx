@@ -9,6 +9,7 @@ import TabNav, { type TabId } from './components/TabNav'
 import UsersPanel from './components/UsersPanel'
 import WidgetConfigCard from './components/WidgetConfigCard'
 import WidgetPreviewCard from './components/WidgetPreviewCard'
+import { withMinDuration } from './lib/withMinDuration'
 
 type Config = {
   id: number
@@ -183,17 +184,19 @@ export default function App() {
   const fetchNowPlaying = useCallback(async () => {
     setLoadingNowPlaying(true)
     try {
-      const data = await requestJson<{
-        isPlaying: boolean
-        track: {
-          name: string
-          artists: string[]
-          album: string
-          albumArt: string | null
-          url: string
-        }
-        lastPlayedAt?: string
-      }>('/api/spotify/now-playing')
+      const data = await withMinDuration(
+        requestJson<{
+          isPlaying: boolean
+          track: {
+            name: string
+            artists: string[]
+            album: string
+            albumArt: string | null
+            url: string
+          }
+          lastPlayedAt?: string
+        }>('/api/spotify/now-playing'),
+      )
       setNowPlaying(data)
     } catch (_err) {
       // ignore errors from now-playing
@@ -241,7 +244,7 @@ export default function App() {
     setSaving(true)
     setConfigError(null)
     try {
-      await postJson('/api/config', cfgToSave)
+      await withMinDuration(postJson('/api/config', cfgToSave))
       setPreviewLoading(true)
       setPreviewKey((k) => k + 1)
     } catch (err) {
@@ -259,10 +262,12 @@ export default function App() {
     setSpotifySuccess(null)
 
     try {
-      await postJson('/api/spotify-config', {
-        clientId: spotifyClientId,
-        clientSecret: spotifyClientSecret,
-      })
+      await withMinDuration(
+        postJson('/api/spotify-config', {
+          clientId: spotifyClientId,
+          clientSecret: spotifyClientSecret,
+        }),
+      )
 
       setSpotifySuccess('Credenciais salvas com sucesso!')
       setSpotifyClientSecret('') // Limpa o campo de secret após salvar
@@ -296,7 +301,7 @@ export default function App() {
     setSpotifySuccess(null)
 
     try {
-      await del('/api/spotify-config')
+      await withMinDuration(del('/api/spotify-config'))
       setSpotifySuccess('Credenciais removidas com sucesso!')
       setSpotifyClientId('')
       setSpotifyClientSecret('')
@@ -317,7 +322,7 @@ export default function App() {
 
     setLoadingSpotifyStatus(true)
     try {
-      await post('/api/spotify/disconnect')
+      await withMinDuration(post('/api/spotify/disconnect'))
       setSpotifyConnected(false)
       setSpotifySuccess('Conta do Spotify desconectada!')
     } catch (err) {
@@ -334,10 +339,12 @@ export default function App() {
     setAuthError(null)
 
     try {
-      await post('/auth/login', {
-        username: loginUsername,
-        password: loginPassword,
-      })
+      await withMinDuration(
+        post('/auth/login', {
+          username: loginUsername,
+          password: loginPassword,
+        }),
+      )
 
       try {
         const meData = await requestJson<Me>('/api/me')

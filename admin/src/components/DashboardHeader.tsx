@@ -1,4 +1,5 @@
 import { ExternalLink, LogOut } from 'lucide-react'
+import Button from './Button'
 
 type RegistrationPolicy = 'open' | 'github_whitelist' | 'invite_only' | 'closed'
 
@@ -80,14 +81,15 @@ export default function DashboardHeader({
             </span>
           </div>
           {showLogout && (
-            <button
-              type="button"
+            <Button
+              variant="danger"
+              size="sm"
+              shape="pill"
+              icon={<LogOut className="w-3 h-3" />}
               onClick={onLogout}
-              className="inline-flex items-center gap-1 rounded-full border border-red-400/40 bg-red-500/15 px-3 py-1 text-[11px] text-red-100 hover:bg-red-500/25 transition-colors"
             >
-              <LogOut aria-hidden="true" className="w-3 h-3" />
               Sair
-            </button>
+            </Button>
           )}
         </div>
       </div>

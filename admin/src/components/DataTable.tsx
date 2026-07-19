@@ -23,26 +23,31 @@ export default function DataTable<T>({
   rowKey,
 }: DataTableProps<T>) {
   return (
-    <>
+    <div
+      className="fade-in-up overflow-hidden rounded-3xl border border-white/8 bg-neutral-900/70 shadow-[0_20px_90px_rgba(0,0,0,0.45)] backdrop-blur-xl"
+      style={{ animationDelay: '60ms', animationFillMode: 'backwards' }}
+    >
       {loading && (
-        <div className="text-center py-8">
-          <div className="text-neutral-400">Carregando...</div>
+        <div className="py-10 text-center text-sm text-neutral-400">
+          Carregando...
         </div>
       )}
 
       {!loading && data.length === 0 && (
-        <div className="text-center py-8 text-neutral-400">{emptyMessage}</div>
+        <div className="py-10 text-center text-sm text-neutral-400">
+          {emptyMessage}
+        </div>
       )}
 
       {!loading && data.length > 0 && (
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 overflow-hidden">
+        <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-neutral-800 bg-neutral-800/50">
+              <tr className="border-b border-white/8 bg-white/5">
                 {columns.map((column) => (
                   <th
                     key={String(column.key)}
-                    className={`px-4 py-3 text-xs font-medium text-neutral-400 uppercase tracking-wider ${
+                    className={`px-4 py-3 text-[11px] font-medium uppercase tracking-[0.14em] text-neutral-400 ${
                       column.align === 'right' ? 'text-right' : 'text-left'
                     }`}
                   >
@@ -51,11 +56,11 @@ export default function DataTable<T>({
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-800">
+            <tbody className="divide-y divide-white/8">
               {data.map((row) => (
                 <tr
                   key={String(row[rowKey])}
-                  className="hover:bg-neutral-800/30 transition-colors"
+                  className="transition-colors duration-150 hover:bg-white/5"
                 >
                   {columns.map((column) => (
                     <td
@@ -73,6 +78,6 @@ export default function DataTable<T>({
           </table>
         </div>
       )}
-    </>
+    </div>
   )
 }

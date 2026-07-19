@@ -69,7 +69,7 @@ export default function GitHubWhitelistPanel() {
 
   const handleAddToWhitelist = async () => {
     if (!newUsername.trim()) {
-      setAddError('Digite um username.')
+      setAddError('Digite um usuário.')
       return
     }
 
@@ -84,7 +84,7 @@ export default function GitHubWhitelistPanel() {
         validateGithub,
       })
 
-      setAddSuccess('Username adicionado com sucesso!')
+      setAddSuccess('Usuário adicionado com sucesso!')
       setNewUsername('')
       setNewNote('')
       await new Promise((resolve) => setTimeout(resolve, 1000))
@@ -98,7 +98,7 @@ export default function GitHubWhitelistPanel() {
         typeof err === 'object' &&
         'status' in err &&
         (err as { status?: number }).status === 409
-          ? 'Username já existe na whitelist'
+          ? 'Usuário já existe na whitelist'
           : err instanceof Error
             ? err.message
             : 'Erro ao adicionar à whitelist.'
@@ -115,7 +115,7 @@ export default function GitHubWhitelistPanel() {
       .filter((u) => u.length > 0)
 
     if (list.length === 0) {
-      setBatchError('Digite pelo menos um username.')
+      setBatchError('Digite pelo menos um usuário.')
       return
     }
 
@@ -192,7 +192,7 @@ export default function GitHubWhitelistPanel() {
   const columns: DataTableColumn<WhitelistEntry>[] = [
     {
       key: 'username',
-      label: 'Username',
+      label: 'Usuário',
       render: (_, row) => (
         <a
           href={`https://github.com/${row.username}`}
@@ -299,7 +299,7 @@ export default function GitHubWhitelistPanel() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
         <input
           type="text"
-          placeholder="Buscar username..."
+          placeholder="Buscar usuário..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full pl-9 pr-4 py-2 rounded-lg border border-neutral-800 bg-neutral-900/50 text-white placeholder-neutral-500 focus:outline-none focus:border-emerald-500/50"
@@ -348,7 +348,7 @@ export default function GitHubWhitelistPanel() {
               <li className="flex gap-3">
                 <span className="text-emerald-400 shrink-0 font-bold">•</span>
                 <span>
-                  Usernames nesta whitelist podem criar conta via GitHub OAuth
+                  Usuários nesta whitelist podem criar conta via GitHub OAuth
                 </span>
               </li>
               <li className="flex gap-3">
@@ -449,7 +449,7 @@ export default function GitHubWhitelistPanel() {
                 htmlFor="add-username"
                 className="text-sm font-medium text-neutral-300 block mb-2"
               >
-                Username GitHub
+                Usuário do GitHub
               </label>
               <input
                 id="add-username"
@@ -491,7 +491,7 @@ export default function GitHubWhitelistPanel() {
                 disabled={adding}
                 className="w-4 h-4 rounded cursor-pointer"
               />
-              <span>Validar username no GitHub antes de adicionar</span>
+              <span>Validar usuário no GitHub antes de adicionar</span>
             </label>
 
             <div className="flex gap-2 pt-4">
@@ -529,7 +529,7 @@ export default function GitHubWhitelistPanel() {
             <div>
               <h3 className="text-xl font-bold text-white">Import em Lote</h3>
               <p className="text-sm text-neutral-400 mt-1">
-                Cole múltiplos usernames, um por linha
+                Cole múltiplos usuários, um por linha
               </p>
             </div>
 
@@ -626,7 +626,7 @@ export default function GitHubWhitelistPanel() {
                 className="w-4 h-4 rounded cursor-pointer disabled:cursor-not-allowed"
               />
               <span>
-                Validar cada username no GitHub (mais lento, mas seguro)
+                Validar cada usuário no GitHub (mais lento, mas seguro)
               </span>
             </label>
             <div className="flex gap-2 pt-4">

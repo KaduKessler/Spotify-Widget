@@ -1,17 +1,94 @@
-import { Edit, Lock, Plus } from 'lucide-react'
+import { Edit, Lock, Plus, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { postJson, putJson, requestJson } from '../api/client'
 import Button from './Button'
 import type { DataTableColumn } from './DataTable'
 import DataTable from './DataTable'
+import Segmented from './Segmented'
+
+type Role = 'admin' | 'user' | 'viewer'
 
 type User = {
   id: number
   username: string
   provider: string
-  role: 'admin' | 'user' | 'viewer'
+  role: Role
   createdAt: string
 }
+
+const roleBadgeStyles: Record<Role, string> = {
+  admin: 'bg-red-500/15 text-red-300 border-red-500/30',
+  user: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+  viewer: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
+}
+
+const roleOptions: { value: Role; label: string }[] = [
+  { value: 'viewer', label: 'Viewer' },
+  { value: 'user', label: 'User' },
+  { value: 'admin', label: 'Admin' },
+]
+
+function RoleBadge({ role }: { role: Role }) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium uppercase ${roleBadgeStyles[role]}`}
+    >
+      {role}
+    </span>
+  )
+}
+
+function ModalShell({
+  title,
+  onClose,
+  children,
+}: {
+  title: string
+  onClose: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+      <button
+        type="button"
+        aria-label="Fechar"
+        className="modal-backdrop-in absolute inset-0 bg-black/70 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="modal-panel-in relative z-10 w-full max-w-md space-y-4 rounded-2xl border border-white/10 bg-neutral-950/95 p-6 shadow-2xl">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-lg font-semibold text-white">{title}</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Fechar"
+            className="rounded-xl border border-white/10 bg-white/5 p-1.5 text-neutral-200 transition-all duration-150 hover:border-emerald-400/60 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70"
+          >
+            <X aria-hidden="true" className="w-4 h-4" />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function FieldLabel({
+  children,
+  htmlFor,
+}: {
+  children: string
+  htmlFor: string
+}) {
+  return (
+    <label htmlFor={htmlFor} className="block text-xs text-neutral-400">
+      {children}
+    </label>
+  )
+}
+
+const inputClass =
+  'w-full rounded-xl border border-white/10 bg-neutral-900/80 px-3 py-2.5 text-sm transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70'
 
 export default function UsersPanel() {
   const [users, setUsers] = useState<User[]>([])
@@ -22,13 +99,13 @@ export default function UsersPanel() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newUsername, setNewUsername] = useState('')
   const [newPassword, setNewPassword] = useState('')
-  const [newRole, setNewRole] = useState<'admin' | 'user' | 'viewer'>('user')
+  const [newRole, setNewRole] = useState<Role>('user')
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
 
   // Edit role modal
   const [editingUser, setEditingUser] = useState<User | null>(null)
-  const [editRole, setEditRole] = useState<'admin' | 'user' | 'viewer'>('user')
+  const [editRole, setEditRole] = useState<Role>('user')
   const [updating, setUpdating] = useState(false)
   const [updateError, setUpdateError] = useState<string | null>(null)
 
@@ -70,7 +147,6 @@ export default function UsersPanel() {
         password: newPassword.trim(),
         role: newRole,
       })
-      // Refresh list
       await fetchUsers()
       setShowCreateModal(false)
       setNewUsername('')
@@ -131,19 +207,6 @@ export default function UsersPanel() {
     }
   }
 
-  const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return 'bg-red-500/20 text-red-400 border-red-500/30'
-      case 'user':
-        return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-      case 'viewer':
-        return 'bg-sky-500/20 text-sky-400 border-sky-500/30'
-      default:
-        return 'bg-neutral-500/20 text-neutral-400 border-neutral-500/30'
-    }
-  }
-
   const columns: DataTableColumn<User>[] = [
     {
       key: 'username',
@@ -154,23 +217,17 @@ export default function UsersPanel() {
     },
     {
       key: 'provider',
-      label: 'Provider',
+      label: 'Origem',
       render: (value) => (
-        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-neutral-800 text-neutral-300">
+        <span className="inline-flex items-center rounded-full bg-white/5 px-2.5 py-0.5 text-xs font-medium text-neutral-300">
           {value}
         </span>
       ),
     },
     {
       key: 'role',
-      label: 'Role',
-      render: (value) => (
-        <span
-          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${getRoleBadgeColor(value as string)}`}
-        >
-          {value}
-        </span>
-      ),
+      label: 'Função',
+      render: (value) => <RoleBadge role={value as Role} />,
     },
     {
       key: 'createdAt',
@@ -182,7 +239,6 @@ export default function UsersPanel() {
           year: 'numeric',
           hour: '2-digit',
           minute: '2-digit',
-          second: '2-digit',
         }),
     },
     {
@@ -190,26 +246,28 @@ export default function UsersPanel() {
       label: 'Ações',
       align: 'right',
       render: (_, user) => (
-        <div className="flex gap-2 justify-end">
+        <div className="flex justify-end gap-2">
           <Button
-            variant="primary"
+            variant="outline"
             size="sm"
-            icon={<Edit size={16} />}
+            icon={<Edit size={14} />}
             onClick={() => {
               setEditingUser(user)
               setEditRole(user.role)
+              setUpdateError(null)
             }}
           >
             Editar Role
           </Button>
           {user.provider === 'password' && (
             <Button
-              variant="secondary"
+              variant="outline"
               size="sm"
-              icon={<Lock size={16} />}
+              icon={<Lock size={14} />}
               onClick={() => {
                 setResettingUser(user)
                 setResetPassword('')
+                setResetError(null)
               }}
             >
               Resetar Senha
@@ -221,27 +279,34 @@ export default function UsersPanel() {
   ]
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-white">Usuários</h2>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-[0.14em] text-neutral-400">
+            Administração
+          </p>
+          <h2 className="text-lg font-semibold text-white">
+            Usuários
+            <span className="ml-2 text-sm font-normal text-neutral-400">
+              {users.length}
+            </span>
+          </h2>
+        </div>
         <Button
           variant="primary"
           size="sm"
           icon={<Plus size={16} />}
-          onClick={() => setShowCreateModal(true)}
+          onClick={() => {
+            setShowCreateModal(true)
+            setCreateError(null)
+          }}
         >
           Criar Usuário
         </Button>
       </div>
 
-      {loading && (
-        <div className="text-center py-8">
-          <div className="text-neutral-400">Carregando usuários...</div>
-        </div>
-      )}
-
       {error && (
-        <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-4 text-red-400">
+        <div className="rounded-xl border border-red-500/40 bg-red-900/40 px-3 py-2 text-xs text-red-100">
           {error}
         </div>
       )}
@@ -254,211 +319,177 @@ export default function UsersPanel() {
         rowKey="id"
       />
 
-      {/* Create User Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-lg shadow-xl w-full max-w-md p-6 space-y-4">
-            <h3 className="text-xl font-bold text-white">Criar Usuário</h3>
-            {createError && (
-              <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-3 text-sm text-red-400">
-                {createError}
-              </div>
-            )}
-            <div className="space-y-3">
-              <div>
-                <label
-                  htmlFor="new-username"
-                  className="block text-sm font-medium text-neutral-400 mb-1"
-                >
-                  Usuário
-                </label>
-                <input
-                  id="new-username"
-                  type="text"
-                  value={newUsername}
-                  onChange={(e) => setNewUsername(e.target.value)}
-                  className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  placeholder="username"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="new-password"
-                  className="block text-sm font-medium text-neutral-400 mb-1"
-                >
-                  Senha
-                </label>
-                <input
-                  id="new-password"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  placeholder="••••••••"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="new-role"
-                  className="block text-sm font-medium text-neutral-400 mb-1"
-                >
-                  Role
-                </label>
-                <select
-                  id="new-role"
-                  value={newRole}
-                  onChange={(e) =>
-                    setNewRole(e.target.value as 'admin' | 'user' | 'viewer')
-                  }
-                  className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                >
-                  <option value="viewer">viewer</option>
-                  <option value="user">user</option>
-                  <option value="admin">admin</option>
-                </select>
-              </div>
+        <ModalShell
+          title="Criar Usuário"
+          onClose={() => {
+            setShowCreateModal(false)
+            setNewUsername('')
+            setNewPassword('')
+            setNewRole('user')
+            setCreateError(null)
+          }}
+        >
+          {createError && (
+            <div className="rounded-xl border border-red-500/40 bg-red-900/40 px-3 py-2 text-xs text-red-100">
+              {createError}
             </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setShowCreateModal(false)
-                  setNewUsername('')
-                  setNewPassword('')
-                  setNewRole('user')
-                  setCreateError(null)
-                }}
-                disabled={creating}
-              >
-                Cancelar
-              </Button>
-              <Button
-                variant={
-                  newUsername.trim() && newPassword.trim()
-                    ? 'success'
-                    : 'primary'
-                }
-                size="sm"
-                onClick={handleCreateUser}
-                loading={creating}
-              >
-                Criar
-              </Button>
-            </div>
+          )}
+          <div className="space-y-1.5">
+            <FieldLabel htmlFor="new-username">Usuário</FieldLabel>
+            <input
+              id="new-username"
+              type="text"
+              value={newUsername}
+              onChange={(e) => setNewUsername(e.target.value)}
+              className={inputClass}
+              placeholder="username"
+            />
           </div>
-        </div>
+          <div className="space-y-1.5">
+            <FieldLabel htmlFor="new-password">Senha</FieldLabel>
+            <input
+              id="new-password"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className={inputClass}
+              placeholder="••••••••"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <FieldLabel htmlFor="new-role">Função</FieldLabel>
+            <Segmented
+              value={newRole}
+              onChange={setNewRole}
+              options={roleOptions}
+              className="w-full"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setShowCreateModal(false)
+                setNewUsername('')
+                setNewPassword('')
+                setNewRole('user')
+                setCreateError(null)
+              }}
+              disabled={creating}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleCreateUser}
+              loading={creating}
+              loadingText="Criando..."
+            >
+              Criar
+            </Button>
+          </div>
+        </ModalShell>
       )}
 
-      {/* Edit Role Modal */}
       {editingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-lg shadow-xl w-full max-w-md p-6 space-y-4">
-            <h3 className="text-xl font-bold text-white">
-              Editar Role: {editingUser.username}
-            </h3>
-            {updateError && (
-              <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-3 text-sm text-red-400">
-                {updateError}
-              </div>
-            )}
-            <div>
-              <label
-                htmlFor="edit-role"
-                className="block text-sm font-medium text-neutral-400 mb-1"
-              >
-                Nova Role
-              </label>
-              <select
-                id="edit-role"
-                value={editRole}
-                onChange={(e) =>
-                  setEditRole(e.target.value as 'admin' | 'user' | 'viewer')
-                }
-                className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                <option value="viewer">viewer</option>
-                <option value="user">user</option>
-                <option value="admin">admin</option>
-              </select>
+        <ModalShell
+          title={`Editar Função: ${editingUser.username}`}
+          onClose={() => {
+            setEditingUser(null)
+            setUpdateError(null)
+          }}
+        >
+          {updateError && (
+            <div className="rounded-xl border border-red-500/40 bg-red-900/40 px-3 py-2 text-xs text-red-100">
+              {updateError}
             </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setEditingUser(null)
-                  setUpdateError(null)
-                }}
-                disabled={updating}
-              >
-                Cancelar
-              </Button>
-              <Button
-                variant="success"
-                size="sm"
-                onClick={handleUpdateRole}
-                loading={updating}
-              >
-                Salvar
-              </Button>
-            </div>
+          )}
+          <div className="space-y-1.5">
+            <FieldLabel htmlFor="edit-role">Nova função</FieldLabel>
+            <Segmented
+              value={editRole}
+              onChange={setEditRole}
+              options={roleOptions}
+              className="w-full"
+            />
           </div>
-        </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setEditingUser(null)
+                setUpdateError(null)
+              }}
+              disabled={updating}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleUpdateRole}
+              loading={updating}
+              loadingText="Salvando..."
+            >
+              Salvar
+            </Button>
+          </div>
+        </ModalShell>
       )}
 
-      {/* Reset Password Modal */}
       {resettingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-lg shadow-xl w-full max-w-md p-6 space-y-4">
-            <h3 className="text-xl font-bold text-white">
-              Redefinir Senha: {resettingUser.username}
-            </h3>
-            {resetError && (
-              <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-3 text-sm text-red-400">
-                {resetError}
-              </div>
-            )}
-            <div>
-              <label
-                htmlFor="reset-password"
-                className="block text-sm font-medium text-neutral-400 mb-1"
-              >
-                Nova Senha
-              </label>
-              <input
-                id="reset-password"
-                type="password"
-                value={resetPassword}
-                onChange={(e) => setResetPassword(e.target.value)}
-                className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                placeholder="••••••••"
-              />
+        <ModalShell
+          title={`Redefinir Senha: ${resettingUser.username}`}
+          onClose={() => {
+            setResettingUser(null)
+            setResetPassword('')
+            setResetError(null)
+          }}
+        >
+          {resetError && (
+            <div className="rounded-xl border border-red-500/40 bg-red-900/40 px-3 py-2 text-xs text-red-100">
+              {resetError}
             </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setResettingUser(null)
-                  setResetPassword('')
-                  setResetError(null)
-                }}
-                disabled={resetting}
-              >
-                Cancelar
-              </Button>
-              <Button
-                variant={resetPassword.trim() ? 'success' : 'secondary'}
-                size="sm"
-                onClick={handleResetPassword}
-                loading={resetting}
-              >
-                Redefinir
-              </Button>
-            </div>
+          )}
+          <div className="space-y-1.5">
+            <FieldLabel htmlFor="reset-password">Nova senha</FieldLabel>
+            <input
+              id="reset-password"
+              type="password"
+              value={resetPassword}
+              onChange={(e) => setResetPassword(e.target.value)}
+              className={inputClass}
+              placeholder="••••••••"
+            />
           </div>
-        </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setResettingUser(null)
+                setResetPassword('')
+                setResetError(null)
+              }}
+              disabled={resetting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleResetPassword}
+              loading={resetting}
+              loadingText="Redefinindo..."
+            >
+              Redefinir
+            </Button>
+          </div>
+        </ModalShell>
       )}
     </div>
   )

@@ -481,7 +481,7 @@ export default function App() {
           {activeTab === 'config' && (
             <>
               <section className="space-y-3">
-                <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">
+                <p className="text-xs uppercase tracking-[0.14em] text-neutral-400">
                   Configuração
                 </p>
                 <div className="grid gap-6 lg:grid-cols-2">

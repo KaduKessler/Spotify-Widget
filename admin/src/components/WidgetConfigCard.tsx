@@ -36,7 +36,7 @@ export default function WidgetConfigCard({
         <p className="text-xs uppercase tracking-[0.18em] text-neutral-400">
           Widget
         </p>
-        <p className="text-[11px] text-neutral-500">
+        <p className="text-[11px] text-neutral-400">
           Modo, tema ou track fixa do widget
         </p>
       </div>

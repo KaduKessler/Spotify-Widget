@@ -34,7 +34,7 @@ export default function WidgetPreviewCard({
           <p className="text-xs uppercase tracking-[0.18em] text-neutral-400">
             Preview
           </p>
-          <p className="text-[11px] text-neutral-500">
+          <p className="text-[11px] text-neutral-400">
             Rota pública para embutir o widget SVG
           </p>
         </div>

@@ -58,7 +58,7 @@ export default function SpotifyPanel({
 }: SpotifyPanelProps) {
   return (
     <section className="space-y-3">
-      <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">
+      <p className="text-xs uppercase tracking-[0.14em] text-neutral-400">
         Integração Spotify
       </p>
       <div className="grid gap-6 lg:grid-cols-2 items-start">
@@ -153,7 +153,7 @@ export default function SpotifyPanel({
               )}
             </div>
 
-            <p className="text-[11px] text-neutral-500 leading-relaxed">
+            <p className="text-[11px] text-neutral-400 leading-relaxed">
               Obtenha suas credenciais em{' '}
               <a
                 href="https://developer.spotify.com/dashboard"
@@ -241,7 +241,7 @@ export default function SpotifyPanel({
                     <p className="text-sm text-neutral-400 truncate">
                       {nowPlaying.track.artists.join(', ')}
                     </p>
-                    <p className="text-xs text-neutral-500 truncate">
+                    <p className="text-xs text-neutral-400 truncate">
                       {nowPlaying.track.album}
                     </p>
                   </div>
@@ -256,7 +256,7 @@ export default function SpotifyPanel({
                       : '⏸ Última tocada'}
                   </span>
                   {nowPlaying.lastPlayedAt && !nowPlaying.isPlaying && (
-                    <span className="text-neutral-500">
+                    <span className="text-neutral-400">
                       {new Date(nowPlaying.lastPlayedAt).toLocaleString(
                         'pt-BR',
                       )}

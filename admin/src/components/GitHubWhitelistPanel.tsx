@@ -95,9 +95,9 @@ export default function GitHubWhitelistPanel() {
       console.error(err)
       const errorMsg =
         err &&
-          typeof err === 'object' &&
-          'status' in err &&
-          (err as { status?: number }).status === 409
+        typeof err === 'object' &&
+        'status' in err &&
+        (err as { status?: number }).status === 409
           ? 'Username já existe na whitelist'
           : err instanceof Error
             ? err.message
@@ -213,7 +213,7 @@ export default function GitHubWhitelistPanel() {
             {value}
           </span>
         ) : (
-          <span className="text-neutral-500 text-sm">Sistema</span>
+          <span className="text-neutral-400 text-sm">Sistema</span>
         ),
     },
     {
@@ -318,7 +318,7 @@ export default function GitHubWhitelistPanel() {
               i
             </span>
             <div>
-              <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">
+              <p className="text-xs uppercase tracking-[0.14em] text-neutral-400">
                 Informações
               </p>
               <p className="text-sm font-semibold text-white">
@@ -460,7 +460,7 @@ export default function GitHubWhitelistPanel() {
                 disabled={adding}
                 className="w-full px-3 py-2 rounded-lg border border-white/10 bg-neutral-800 text-white placeholder-neutral-500 focus:outline-none focus:border-emerald-500/50 disabled:opacity-50"
               />
-              <p className="text-xs text-neutral-500 mt-1">
+              <p className="text-xs text-neutral-400 mt-1">
                 1-39 caracteres, sem espaços
               </p>
             </div>
@@ -647,21 +647,21 @@ export default function GitHubWhitelistPanel() {
               </Button>
               {(!batchResult ||
                 (batchResult && batchResult.errors.length > 0)) && (
-                  <Button
-                    variant={batchUsernames.trim() ? 'success' : 'secondary'}
-                    fullWidth
-                    onClick={() => {
-                      // Se há resultado com erros, limpa o resultado para tentar novamente
-                      if (batchResult && batchResult.errors.length > 0) {
-                        setBatchResult(null)
-                      }
-                      handleBatchImport()
-                    }}
-                    loading={batchImporting}
-                  >
-                    {batchResult ? 'Tentar Novamente' : 'Importar'}
-                  </Button>
-                )}
+                <Button
+                  variant={batchUsernames.trim() ? 'success' : 'secondary'}
+                  fullWidth
+                  onClick={() => {
+                    // Se há resultado com erros, limpa o resultado para tentar novamente
+                    if (batchResult && batchResult.errors.length > 0) {
+                      setBatchResult(null)
+                    }
+                    handleBatchImport()
+                  }}
+                  loading={batchImporting}
+                >
+                  {batchResult ? 'Tentar Novamente' : 'Importar'}
+                </Button>
+              )}
             </div>
           </div>
         </div>

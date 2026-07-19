@@ -72,7 +72,7 @@ function PasswordLoginCard({
             <p className="text-xs font-semibold text-neutral-100">
               Com usuário e senha
             </p>
-            <p className="text-[11px] text-neutral-500">
+            <p className="text-[11px] text-neutral-400">
               Credenciais locais do servidor.
             </p>
           </div>
@@ -108,7 +108,7 @@ function PasswordLoginCard({
               type="button"
               onClick={onToggleShowPassword}
               aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 transition-colors duration-200"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-300 transition-colors duration-200"
             >
               {showPassword ? (
                 <EyeOff aria-hidden="true" className="w-4 h-4" />
@@ -152,7 +152,7 @@ function GithubLoginCard({
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-semibold text-neutral-100">Com GitHub</p>
-            <p className="text-[11px] text-neutral-500">
+            <p className="text-[11px] text-neutral-400">
               OAuth seguro e verificado.
             </p>
           </div>
@@ -225,7 +225,7 @@ export default function LoginScreen({
       >
         <div className="fade-in-up rounded-3xl border border-white/6 bg-neutral-900/70 backdrop-blur-xl shadow-[0_20px_90px_rgba(0,0,0,0.5)] p-8 space-y-6 max-w-xl mx-auto">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.28em] text-neutral-500">
+            <p className="text-[11px] uppercase tracking-[0.28em] text-neutral-400">
               Login
             </p>
             <h2 className="text-lg font-semibold text-white">

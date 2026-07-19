@@ -4,6 +4,7 @@ import DashboardHeader from './components/DashboardHeader'
 import FlagsModal from './components/FlagsModal'
 import GitHubWhitelistPanel from './components/GitHubWhitelistPanel'
 import LoginScreen from './components/LoginScreen'
+import NowPlayingCard from './components/NowPlayingCard'
 import SpotifyPanel from './components/SpotifyPanel'
 import TabNav, { type TabId } from './components/TabNav'
 import UsersPanel from './components/UsersPanel'
@@ -609,6 +610,13 @@ export default function App() {
                     setTimeout(() => setCopiedFormat(null), 1400)
                   }}
                 />
+                {spotifyConnected && config.mode === 'FIXED_TRACK' && (
+                  <NowPlayingCard
+                    nowPlaying={nowPlaying}
+                    loadingNowPlaying={loadingNowPlaying}
+                    onRefresh={fetchNowPlaying}
+                  />
+                )}
               </section>
 
               <SpotifyPanel
@@ -620,15 +628,12 @@ export default function App() {
                 spotifySuccess={spotifySuccess}
                 spotifyConnected={spotifyConnected}
                 loadingSpotifyStatus={loadingSpotifyStatus}
-                nowPlaying={nowPlaying}
-                loadingNowPlaying={loadingNowPlaying}
                 onClientIdChange={setSpotifyClientId}
                 onClientSecretChange={setSpotifyClientSecret}
                 onSubmit={handleSaveSpotify}
                 onClear={handleClearSpotify}
                 onConnect={handleConnectSpotify}
                 onDisconnect={handleDisconnectSpotify}
-                onRefreshNowPlaying={fetchNowPlaying}
               />
             </>
           )}

@@ -70,7 +70,9 @@ export default function SpotifyPanel({
       <p className="text-xs uppercase tracking-[0.14em] text-neutral-400">
         Integração Spotify
       </p>
-      <div className="grid gap-6 lg:grid-cols-2 items-start">
+      <div
+        className={`grid items-start gap-6 ${spotifyConnected ? 'lg:grid-cols-2' : ''}`}
+      >
         <div
           className="fade-in-up rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl p-6 space-y-5 shadow-[0_20px_90px_rgba(0,0,0,0.45)]"
           style={{ animationDelay: '180ms', animationFillMode: 'backwards' }}

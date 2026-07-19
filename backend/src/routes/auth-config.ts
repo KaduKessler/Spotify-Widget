@@ -8,8 +8,10 @@ export async function registerAuthConfigRoute(app: FastifyInstance) {
     const providers: string[] = []
 
     // Exposição dos providers respeitando política
-    if (env.ENABLE_PASSWORD_AUTH && env.REGISTRATION_POLICY !== 'closed') providers.push('password')
-    if (env.ENABLE_GITHUB_AUTH && env.REGISTRATION_POLICY !== 'closed') providers.push('github')
+    if (env.ENABLE_PASSWORD_AUTH && env.REGISTRATION_POLICY !== 'closed')
+      providers.push('password')
+    if (env.ENABLE_GITHUB_AUTH && env.REGISTRATION_POLICY !== 'closed')
+      providers.push('github')
     if (env.ENABLE_NONE_AUTH) providers.push('none')
 
     return { providers, policy: env.REGISTRATION_POLICY }

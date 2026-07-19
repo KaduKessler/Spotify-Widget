@@ -7,7 +7,9 @@ export async function registerSpotifyAuthRoutes(app: FastifyInstance) {
     // Verifica sessão manualmente (pois /auth/* é público no auth plugin)
     const raw = request.cookies.session
     if (!raw) {
-      return reply.status(401).send({ error: 'Unauthorized', message: 'Not logged in' })
+      return reply
+        .status(401)
+        .send({ error: 'Unauthorized', message: 'Not logged in' })
     }
 
     const unsign = reply.unsignCookie(raw)
@@ -31,7 +33,9 @@ export async function registerSpotifyAuthRoutes(app: FastifyInstance) {
     }
 
     // Gera state para CSRF protection
-    const state = Buffer.from(JSON.stringify({ username })).toString('base64url')
+    const state = Buffer.from(JSON.stringify({ username })).toString(
+      'base64url',
+    )
 
     // Salva state no cookie
     reply.setCookie('spotify_oauth_state', state, {
@@ -87,7 +91,9 @@ export async function registerSpotifyAuthRoutes(app: FastifyInstance) {
 
     const user = await getUserByUsername(username)
     if (!user || !user.spotifyClientId || !user.spotifyClientSecret) {
-      return reply.status(400).send({ error: 'Invalid user or missing credentials' })
+      return reply
+        .status(400)
+        .send({ error: 'Invalid user or missing credentials' })
     }
 
     // Troca code por access token
@@ -103,7 +109,7 @@ export async function registerSpotifyAuthRoutes(app: FastifyInstance) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': `Basic ${basicAuth}`,
+          Authorization: `Basic ${basicAuth}`,
         },
         body: new URLSearchParams({
           grant_type: 'authorization_code',

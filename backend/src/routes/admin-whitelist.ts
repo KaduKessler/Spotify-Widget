@@ -29,14 +29,17 @@ export async function registerAdminWhitelistRoutes(app: FastifyInstance) {
     const username = (body.username || '').trim()
 
     if (!username) {
-      return reply.code(400).send({ error: 'username_required', message: 'Username é obrigatório' })
+      return reply
+        .code(400)
+        .send({ error: 'username_required', message: 'Username é obrigatório' })
     }
 
     // Valida padrão do username
     if (!isValidGitHubUsername(username)) {
       return reply.code(400).send({
         error: 'invalid_username_format',
-        message: 'Username deve ter 1-39 caracteres e conter apenas letras, números e hífen'
+        message:
+          'Username deve ter 1-39 caracteres e conter apenas letras, números e hífen',
       })
     }
 
@@ -45,7 +48,7 @@ export async function registerAdminWhitelistRoutes(app: FastifyInstance) {
     if (existing && !existing.removedAt) {
       return reply.code(409).send({
         error: 'username_already_exists',
-        message: 'Username já está na whitelist'
+        message: 'Username já está na whitelist',
       })
     }
 
@@ -55,7 +58,7 @@ export async function registerAdminWhitelistRoutes(app: FastifyInstance) {
       if (!exists) {
         return reply.code(400).send({
           error: 'github_user_not_found',
-          message: `Username ${username} não encontrado no GitHub`
+          message: `Username ${username} não encontrado no GitHub`,
         })
       }
     }
@@ -72,7 +75,7 @@ export async function registerAdminWhitelistRoutes(app: FastifyInstance) {
       app.log.error({ err }, 'Failed to add to whitelist')
       return reply.code(500).send({
         error: 'add_failed',
-        message: 'Falha ao adicionar à whitelist'
+        message: 'Falha ao adicionar à whitelist',
       })
     }
   })
@@ -85,7 +88,7 @@ export async function registerAdminWhitelistRoutes(app: FastifyInstance) {
     if (!username) {
       return reply.code(400).send({
         error: 'username_required',
-        message: 'Username é obrigatório'
+        message: 'Username é obrigatório',
       })
     }
 
@@ -93,22 +96,25 @@ export async function registerAdminWhitelistRoutes(app: FastifyInstance) {
     if (!existing) {
       return reply.code(404).send({
         error: 'not_found',
-        message: 'Username não encontrado na whitelist'
+        message: 'Username não encontrado na whitelist',
       })
     }
 
     if (existing.removedAt) {
       return reply.code(404).send({
         error: 'already_removed',
-        message: 'Username já foi removido da whitelist'
+        message: 'Username já foi removido da whitelist',
       })
     }
 
-    const success = await removeFromGitHubWhitelist(username, req.username || 'unknown')
+    const success = await removeFromGitHubWhitelist(
+      username,
+      req.username || 'unknown',
+    )
     if (!success) {
       return reply.code(500).send({
         error: 'remove_failed',
-        message: 'Falha ao remover da whitelist'
+        message: 'Falha ao remover da whitelist',
       })
     }
 
@@ -128,14 +134,14 @@ export async function registerAdminWhitelistRoutes(app: FastifyInstance) {
     if (!Array.isArray(usernames) || usernames.length === 0) {
       return reply.code(400).send({
         error: 'empty_list',
-        message: 'Lista de usernames não pode estar vazia'
+        message: 'Lista de usernames não pode estar vazia',
       })
     }
 
     if (usernames.length > 100) {
       return reply.code(400).send({
         error: 'too_many',
-        message: 'Máximo de 100 usernames por lote'
+        message: 'Máximo de 100 usernames por lote',
       })
     }
 

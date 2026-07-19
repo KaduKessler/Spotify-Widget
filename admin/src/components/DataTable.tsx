@@ -39,11 +39,12 @@ export default function DataTable<T>({
           <table className="w-full">
             <thead>
               <tr className="border-b border-neutral-800 bg-neutral-800/50">
-                {columns.map(column => (
+                {columns.map((column) => (
                   <th
                     key={String(column.key)}
-                    className={`px-4 py-3 text-xs font-medium text-neutral-400 uppercase tracking-wider ${column.align === 'right' ? 'text-right' : 'text-left'
-                      }`}
+                    className={`px-4 py-3 text-xs font-medium text-neutral-400 uppercase tracking-wider ${
+                      column.align === 'right' ? 'text-right' : 'text-left'
+                    }`}
                   >
                     {column.label}
                   </th>
@@ -51,14 +52,19 @@ export default function DataTable<T>({
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-800">
-              {data.map(row => (
-                <tr key={String(row[rowKey])} className="hover:bg-neutral-800/30 transition-colors">
-                  {columns.map(column => (
+              {data.map((row) => (
+                <tr
+                  key={String(row[rowKey])}
+                  className="hover:bg-neutral-800/30 transition-colors"
+                >
+                  {columns.map((column) => (
                     <td
                       key={String(column.key)}
                       className={`px-4 py-3 text-sm ${column.align === 'right' ? 'text-right' : 'text-left'}`}
                     >
-                      {column.render ? column.render(row[column.key], row) : String(row[column.key] ?? '—')}
+                      {column.render
+                        ? column.render(row[column.key], row)
+                        : String(row[column.key] ?? '—')}
                     </td>
                   ))}
                 </tr>

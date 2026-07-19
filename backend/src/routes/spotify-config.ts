@@ -38,7 +38,9 @@ export async function registerSpotifyConfigRoutes(app: FastifyInstance) {
       : null
 
     return {
-      configured: !!(spotifyData.spotifyClientId && spotifyData.spotifyClientSecret),
+      configured: !!(
+        spotifyData.spotifyClientId && spotifyData.spotifyClientSecret
+      ),
       clientId: spotifyData.spotifyClientId || null,
       clientSecret: maskedSecret,
     }
@@ -102,6 +104,9 @@ export async function registerSpotifyConfigRoutes(app: FastifyInstance) {
 
     app.log.info({ username }, 'Spotify credentials cleared')
 
-    return { success: true, message: 'Spotify credentials cleared successfully' }
+    return {
+      success: true,
+      message: 'Spotify credentials cleared successfully',
+    }
   })
 }

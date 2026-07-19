@@ -29,19 +29,19 @@ async function bootstrap() {
     logger:
       env.NODE_ENV === 'development'
         ? {
-          level: 'debug',
-          transport: {
-            target: 'pino-pretty',
-            options: {
-              colorize: true,
-              ignore: 'pid,hostname',
-              translateTime: 'HH:MM:ss',
+            level: 'debug',
+            transport: {
+              target: 'pino-pretty',
+              options: {
+                colorize: true,
+                ignore: 'pid,hostname',
+                translateTime: 'HH:MM:ss',
+              },
             },
-          },
-        }
+          }
         : {
-          level: 'info',
-        },
+            level: 'info',
+          },
   })
 
   // Error handler global
@@ -107,14 +107,14 @@ async function bootstrap() {
       contentSecurityPolicy:
         env.NODE_ENV === 'production'
           ? {
-            directives: {
-              defaultSrc: ["'self'"],
-              scriptSrc: ["'self'"],
-              styleSrc: ["'self'", "'unsafe-inline'"],
-              imgSrc: ["'self'", 'data:'],
-              connectSrc: ["'self'"],
-            },
-          }
+              directives: {
+                defaultSrc: ["'self'"],
+                scriptSrc: ["'self'"],
+                styleSrc: ["'self'", "'unsafe-inline'"],
+                imgSrc: ["'self'", 'data:'],
+                connectSrc: ["'self'"],
+              },
+            }
           : false,
       // Permite desabilitar HSTS caso o proxy (ex: Nginx Proxy Manager) já adicione o header
       hsts: env.HELMET_DISABLE_HSTS

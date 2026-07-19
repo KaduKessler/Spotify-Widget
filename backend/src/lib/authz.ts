@@ -8,7 +8,10 @@ export function requireAdmin(request: FastifyRequest, reply: FastifyReply) {
   return true
 }
 
-export function requireAuthenticated(request: FastifyRequest, reply: FastifyReply) {
+export function requireAuthenticated(
+  request: FastifyRequest,
+  reply: FastifyReply,
+) {
   if (!request.username) {
     reply.code(401).send({ error: 'Unauthorized' })
     return false
@@ -16,9 +19,15 @@ export function requireAuthenticated(request: FastifyRequest, reply: FastifyRepl
   return true
 }
 
-export function requireOwnerOrAdmin(request: FastifyRequest, reply: FastifyReply, targetUsername: string) {
+export function requireOwnerOrAdmin(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  targetUsername: string,
+) {
   if (request.role === 'admin') return true
   if (request.username === targetUsername) return true
-  reply.code(403).send({ error: 'Forbidden: you can only access your own resources' })
+  reply
+    .code(403)
+    .send({ error: 'Forbidden: you can only access your own resources' })
   return false
 }

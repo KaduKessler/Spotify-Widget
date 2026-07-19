@@ -33,7 +33,9 @@ export interface ValidatedWidgetConfig {
  */
 export function parseWidgetConfig(
   input: unknown,
-): { success: true; data: ValidatedWidgetConfig } | { success: false; error: string } {
+):
+  | { success: true; data: ValidatedWidgetConfig }
+  | { success: false; error: string } {
   const result = WidgetConfigSchema.safeParse(input)
 
   if (!result.success) {
@@ -75,4 +77,3 @@ export const InviteTokenCreateSchema = z.object({
 })
 
 export type InviteTokenCreate = z.infer<typeof InviteTokenCreateSchema>
-

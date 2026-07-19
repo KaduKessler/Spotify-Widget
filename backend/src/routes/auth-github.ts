@@ -126,7 +126,9 @@ export async function registerGithubAuthRoutes(app: FastifyInstance) {
         : false
 
       if (!inDatabaseWhitelist && !inEnvWhitelist) {
-        return reply.code(403).send({ error: 'Not allowed by GitHub whitelist' })
+        return reply
+          .code(403)
+          .send({ error: 'Not allowed by GitHub whitelist' })
       }
     }
 

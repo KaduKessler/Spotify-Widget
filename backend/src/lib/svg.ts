@@ -15,7 +15,8 @@ export function renderSvg(
   const height = 160
   const bg = theme === 'dark' ? '#151b23' : '#ffffff'
   const textPrimary = theme === 'dark' ? '#FFFFFF' : '#161B22'
-  const textSecondary = theme === 'dark' ? 'rgba(240,248,255,0.66)' : 'rgba(22,27,34,0.66)'
+  const textSecondary =
+    theme === 'dark' ? 'rgba(240,248,255,0.66)' : 'rgba(22,27,34,0.66)'
   // const accent = '#1DB954' // não utilizado após remover o ícone
 
   const cover = track.cover_url ?? 'https://placehold.co/400x400/png'
@@ -76,17 +77,26 @@ export function renderSvg(
   </text>
 
   <!-- Scan code opcional (rotacionado) -->
-  ${hasScan ? `
+  ${
+    hasScan
+      ? `
   <g transform="translate(${width - 20}, 20) rotate(-90)">
     <image xlink:href="${opts?.scanCodeSrc}" href="${opts?.scanCodeSrc}" x="0" y="0" width="120" height="${height}"/>
   </g>
-  ` : ''}
+  `
+      : ''
+  }
 
 </svg>
 `
 }
 
-function renderEq(x: number, y: number, theme: 'dark' | 'light', _rainbow?: boolean) {
+function renderEq(
+  x: number,
+  y: number,
+  theme: 'dark' | 'light',
+  _rainbow?: boolean,
+) {
   const barColor = theme === 'dark' ? '#1DB954' : '#1DB954'
   const barWidth = 10
   const gap = 2
@@ -154,7 +164,11 @@ function escapeXml(str: string): string {
     .replace(/'/g, '&apos;')
 }
 
-function truncateByWidth(text: string, fontSize: number, maxWidth: number): string {
+function truncateByWidth(
+  text: string,
+  fontSize: number,
+  maxWidth: number,
+): string {
   const perChar = fontSize * 0.55
   const maxChars = Math.max(3, Math.floor(maxWidth / perChar))
   if (text.length <= maxChars) return text

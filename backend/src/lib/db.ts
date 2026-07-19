@@ -84,7 +84,14 @@ export async function getUserById(id: number): Promise<User | null> {
 // User management helpers
 // ========================
 
-export async function listUsers(): Promise<Array<Pick<User, 'id' | 'username' | 'provider' | 'role' | 'avatarUrl' | 'createdAt'>>> {
+export async function listUsers(): Promise<
+  Array<
+    Pick<
+      User,
+      'id' | 'username' | 'provider' | 'role' | 'avatarUrl' | 'createdAt'
+    >
+  >
+> {
   const users = await prisma.user.findMany({
     orderBy: { id: 'asc' },
     select: {
@@ -99,7 +106,10 @@ export async function listUsers(): Promise<Array<Pick<User, 'id' | 'username' | 
   return users
 }
 
-export async function updateUserRole(username: string, role: 'admin' | 'user' | 'viewer'): Promise<User | null> {
+export async function updateUserRole(
+  username: string,
+  role: 'admin' | 'user' | 'viewer',
+): Promise<User | null> {
   try {
     return await prisma.user.update({
       where: { username },
@@ -110,7 +120,10 @@ export async function updateUserRole(username: string, role: 'admin' | 'user' | 
   }
 }
 
-export async function setUserPasswordHash(username: string, passwordHash: string): Promise<User | null> {
+export async function setUserPasswordHash(
+  username: string,
+  passwordHash: string,
+): Promise<User | null> {
   try {
     return await prisma.user.update({
       where: { username },
@@ -121,7 +134,11 @@ export async function setUserPasswordHash(username: string, passwordHash: string
   }
 }
 
-export async function createPasswordUser(params: { username: string; passwordHash: string; role?: 'admin' | 'user' | 'viewer' }): Promise<User> {
+export async function createPasswordUser(params: {
+  username: string
+  passwordHash: string
+  role?: 'admin' | 'user' | 'viewer'
+}): Promise<User> {
   return prisma.user.create({
     data: {
       provider: 'password',
@@ -210,20 +227,28 @@ export async function deleteConfig(userId: number): Promise<void> {
  * GitHub usernames: 1-39 caracteres, [a-zA-Z0-9-], não pode começar/terminar com hífen
  */
 export function isValidGitHubUsername(username: string): boolean {
-  return /^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,37}[a-zA-Z0-9])?$/.test(username) && username.length <= 39
+  return (
+    /^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,37}[a-zA-Z0-9])?$/.test(username) &&
+    username.length <= 39
+  )
 }
 
 /**
  * Verifica se o username existe no GitHub (via API)
  */
-export async function validateGitHubUserExists(username: string): Promise<boolean> {
+export async function validateGitHubUserExists(
+  username: string,
+): Promise<boolean> {
   try {
-    const response = await fetch(`https://api.github.com/users/${encodeURIComponent(username)}`, {
-      headers: {
-        'User-Agent': 'Spotify-Widget-Admin',
-        'Accept': 'application/vnd.github.v3+json',
+    const response = await fetch(
+      `https://api.github.com/users/${encodeURIComponent(username)}`,
+      {
+        headers: {
+          'User-Agent': 'Spotify-Widget-Admin',
+          Accept: 'application/vnd.github.v3+json',
+        },
       },
-    })
+    )
     return response.status === 200
   } catch (err: unknown) {
     console.error(`Failed to validate GitHub user ${username}:`, err)
@@ -244,7 +269,11 @@ export async function getGitHubWhitelistEntry(username: string) {
   })
 }
 
-export async function addToGitHubWhitelist(username: string, addedBy?: string, note?: string) {
+export async function addToGitHubWhitelist(
+  username: string,
+  addedBy?: string,
+  note?: string,
+) {
   // Verificar se já existe (inclusive removidos)
   const existing = await prisma.gitHubWhitelist.findUnique({
     where: { username },
@@ -279,7 +308,10 @@ export async function addToGitHubWhitelist(username: string, addedBy?: string, n
   })
 }
 
-export async function removeFromGitHubWhitelist(username: string, removedBy?: string): Promise<boolean> {
+export async function removeFromGitHubWhitelist(
+  username: string,
+  removedBy?: string,
+): Promise<boolean> {
   try {
     await prisma.gitHubWhitelist.update({
       where: { username },
@@ -301,7 +333,9 @@ export async function isGitHubWhitelisted(username: string): Promise<boolean> {
   return !!entry && !entry.removedAt // Verificar se não foi removido
 }
 
-export async function importGitHubWhitelistFromEnv(envWhitelist: string[] | undefined): Promise<number> {
+export async function importGitHubWhitelistFromEnv(
+  envWhitelist: string[] | undefined,
+): Promise<number> {
   if (!envWhitelist || envWhitelist.length === 0) {
     return 0
   }
@@ -320,7 +354,7 @@ export async function importGitHubWhitelistFromEnv(envWhitelist: string[] | unde
       await addToGitHubWhitelist(
         trimmed,
         undefined, // addedBy = null
-        'Importado do .env'
+        'Importado do .env',
       )
       imported++
     } catch (err: unknown) {

@@ -20,16 +20,10 @@ export default function FlagsModal({
       <button
         type="button"
         aria-label="Fechar flags"
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="modal-backdrop-in absolute inset-0 bg-black/70 backdrop-blur-sm"
         onClick={onClose}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            onClose()
-          }
-        }}
       />
-      <div className="relative z-10 w-full max-w-lg rounded-2xl border border-white/10 bg-neutral-950/95 p-6 shadow-2xl">
+      <div className="modal-panel-in relative z-10 w-full max-w-lg rounded-2xl border border-white/10 bg-neutral-950/95 p-6 shadow-2xl">
         <div className="flex items-center justify-between gap-3 mb-4">
           <div>
             <p className="text-xs uppercase tracking-[0.18em] text-neutral-400">
@@ -43,7 +37,7 @@ export default function FlagsModal({
             type="button"
             onClick={onClose}
             aria-label="Fechar"
-            className="rounded-xl border border-white/10 bg-white/5 p-1.5 text-neutral-200 hover:border-emerald-400/60"
+            className="rounded-xl border border-white/10 bg-white/5 p-1.5 text-neutral-200 transition-all duration-150 hover:border-emerald-400/60 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70"
           >
             <X aria-hidden="true" className="w-4 h-4" />
           </button>

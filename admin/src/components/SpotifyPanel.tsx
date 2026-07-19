@@ -1,4 +1,13 @@
-import { ExternalLink, Music, RefreshCw, Trash2, Unlink } from 'lucide-react'
+import {
+  Check,
+  ExternalLink,
+  Music,
+  Pause,
+  Play,
+  RefreshCw,
+  Trash2,
+  Unlink,
+} from 'lucide-react'
 import Button from './Button'
 
 type NowPlaying = {
@@ -62,7 +71,10 @@ export default function SpotifyPanel({
         Integração Spotify
       </p>
       <div className="grid gap-6 lg:grid-cols-2 items-start">
-        <div className="rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl p-6 space-y-5 shadow-[0_20px_90px_rgba(0,0,0,0.45)]">
+        <div
+          className="fade-in-up rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl p-6 space-y-5 shadow-[0_20px_90px_rgba(0,0,0,0.45)]"
+          style={{ animationDelay: '180ms', animationFillMode: 'backwards' }}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs uppercase tracking-[0.14em] text-neutral-400">
@@ -71,8 +83,9 @@ export default function SpotifyPanel({
               <h2 className="text-lg font-semibold">Credenciais</h2>
             </div>
             {spotifyConfig?.configured && (
-              <span className="rounded-full border border-emerald-400/40 bg-emerald-500/15 px-3 py-1 text-[11px] text-emerald-200">
-                ✓ Configurado
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-3 py-1 text-[11px] text-emerald-200">
+                <Check aria-hidden="true" className="h-3 w-3" />
+                Configurado
               </span>
             )}
           </div>
@@ -205,7 +218,10 @@ export default function SpotifyPanel({
         </div>
 
         {spotifyConnected && (
-          <div className="rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl p-6 space-y-4 shadow-[0_20px_90px_rgba(0,0,0,0.45)]">
+          <div
+            className="fade-in-up rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl p-6 space-y-4 shadow-[0_20px_90px_rgba(0,0,0,0.45)]"
+            style={{ animationDelay: '220ms', animationFillMode: 'backwards' }}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs uppercase tracking-[0.14em] text-neutral-400">
@@ -249,11 +265,14 @@ export default function SpotifyPanel({
 
                 <div className="flex items-center gap-2 text-xs">
                   <span
-                    className={`px-2 py-1 rounded-full ${nowPlaying.isPlaying ? 'bg-emerald-500/20 text-emerald-300' : 'bg-neutral-700/50 text-neutral-400'}`}
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-1 ${nowPlaying.isPlaying ? 'bg-emerald-500/20 text-emerald-300' : 'bg-neutral-700/50 text-neutral-400'}`}
                   >
-                    {nowPlaying.isPlaying
-                      ? '▶ Tocando agora'
-                      : '⏸ Última tocada'}
+                    {nowPlaying.isPlaying ? (
+                      <Play aria-hidden="true" className="h-3 w-3" />
+                    ) : (
+                      <Pause aria-hidden="true" className="h-3 w-3" />
+                    )}
+                    {nowPlaying.isPlaying ? 'Tocando agora' : 'Última tocada'}
                   </span>
                   {nowPlaying.lastPlayedAt && !nowPlaying.isPlaying && (
                     <span className="text-neutral-400">
@@ -268,7 +287,7 @@ export default function SpotifyPanel({
                   href={nowPlaying.track.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#1DB954] px-4 py-2 text-center text-sm font-semibold text-white hover:bg-[#1ed760] transition"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#1DB954] px-4 py-2 text-center text-sm font-semibold text-white transition-all duration-150 hover:bg-[#1ed760] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70"
                 >
                   Abrir no Spotify
                   <ExternalLink aria-hidden="true" className="w-4 h-4" />

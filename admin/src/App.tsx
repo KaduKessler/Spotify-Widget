@@ -7,8 +7,7 @@ import LoginScreen from './components/LoginScreen'
 import SpotifyPanel from './components/SpotifyPanel'
 import TabNav, { type TabId } from './components/TabNav'
 import UsersPanel from './components/UsersPanel'
-import WidgetConfigCard from './components/WidgetConfigCard'
-import WidgetPreviewCard from './components/WidgetPreviewCard'
+import WidgetEditorCard from './components/WidgetEditorCard'
 import { withMinDuration } from './lib/withMinDuration'
 
 type Config = {
@@ -45,6 +44,11 @@ export default function App() {
   const [previewKey, setPreviewKey] = useState(0)
   const [previewLoading, setPreviewLoading] = useState(true)
 
+  // Aparência customizada do widget (só na URL, não persistida)
+  const [customBg, setCustomBg] = useState('')
+  const [customColor, setCustomColor] = useState('')
+  const [customScale, setCustomScale] = useState(1)
+
   const [loginUsername, setLoginUsername] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
   const [loginLoading, setLoginLoading] = useState(false)
@@ -79,8 +83,9 @@ export default function App() {
   const [loadingNowPlaying, setLoadingNowPlaying] = useState(false)
 
   // Feedback de cópia
-  const [copiedEmbed, setCopiedEmbed] = useState(false)
-  const [copiedUrl, setCopiedUrl] = useState(false)
+  const [copiedFormat, setCopiedFormat] = useState<
+    'markdown' | 'html' | 'url' | null
+  >(null)
   const [showFlagsModal, setShowFlagsModal] = useState(false)
 
   // Avatar do usuário (usa avatar do GitHub quando disponível)
@@ -383,7 +388,17 @@ export default function App() {
     window.location.href = '/auth/github'
   }
 
-  const widgetUrl = me ? `/widget?user=${encodeURIComponent(me.id)}` : `/widget`
+  const widgetUrl = useMemo(() => {
+    const base = me ? `/widget?user=${encodeURIComponent(me.id)}` : `/widget`
+    const params = new URLSearchParams()
+    if (customBg) params.set('bg', customBg)
+    if (customColor) params.set('color', customColor)
+    if (customScale !== 1) params.set('scale', String(customScale))
+    const query = params.toString()
+    if (!query) return base
+    return `${base}${base.includes('?') ? '&' : '?'}${query}`
+  }, [me, customBg, customColor, customScale])
+
   const backendBase =
     (import.meta.env.VITE_BACKEND_URL as string) || 'http://127.0.0.1:3000'
   const jsonUrl = me
@@ -484,42 +499,55 @@ export default function App() {
                 <p className="text-xs uppercase tracking-[0.14em] text-neutral-400">
                   Configuração
                 </p>
-                <div className="grid gap-6 lg:grid-cols-2">
-                  <WidgetConfigCard
-                    config={config}
-                    saving={saving}
-                    configError={configError}
-                    onChangeMode={(mode) => setConfig({ ...config, mode })}
-                    onChangeTrackId={(track_id) =>
-                      setConfig({ ...config, track_id })
-                    }
-                    onChangeTheme={(theme) => setConfig({ ...config, theme })}
-                    onOpenFlags={() => setShowFlagsModal(true)}
-                    onSave={() => handleSave()}
-                  />
-                  <WidgetPreviewCard
-                    widgetUrl={widgetUrl}
-                    previewUrl={previewUrl}
-                    previewKey={previewKey}
-                    previewLoading={previewLoading}
-                    onPreviewLoad={() => setPreviewLoading(false)}
-                    onPreviewError={() => setPreviewLoading(false)}
-                    copiedEmbed={copiedEmbed}
-                    copiedUrl={copiedUrl}
-                    onCopyEmbed={() => {
-                      navigator.clipboard.writeText(
-                        `<img src="${previewUrl}" />`,
-                      )
-                      setCopiedEmbed(true)
-                      setTimeout(() => setCopiedEmbed(false), 1400)
-                    }}
-                    onCopyUrl={() => {
-                      navigator.clipboard.writeText(previewUrl)
-                      setCopiedUrl(true)
-                      setTimeout(() => setCopiedUrl(false), 1400)
-                    }}
-                  />
-                </div>
+                <WidgetEditorCard
+                  config={config}
+                  saving={saving}
+                  configError={configError}
+                  onChangeMode={(mode) => setConfig({ ...config, mode })}
+                  onChangeTrackId={(track_id) =>
+                    setConfig({ ...config, track_id })
+                  }
+                  onChangeTheme={(theme) => setConfig({ ...config, theme })}
+                  onOpenFlags={() => setShowFlagsModal(true)}
+                  onSave={() => handleSave()}
+                  customBg={customBg}
+                  customColor={customColor}
+                  customScale={customScale}
+                  onChangeCustomBg={(value) => {
+                    setPreviewLoading(true)
+                    setCustomBg(value)
+                  }}
+                  onChangeCustomColor={(value) => {
+                    setPreviewLoading(true)
+                    setCustomColor(value)
+                  }}
+                  onChangeCustomScale={(value) => {
+                    setPreviewLoading(true)
+                    setCustomScale(value)
+                  }}
+                  widgetUrl={widgetUrl}
+                  previewUrl={previewUrl}
+                  previewKey={previewKey}
+                  previewLoading={previewLoading}
+                  onPreviewLoad={() => setPreviewLoading(false)}
+                  onPreviewError={() => setPreviewLoading(false)}
+                  copiedFormat={copiedFormat}
+                  onCopyMarkdown={() => {
+                    navigator.clipboard.writeText(`![Spotify](${previewUrl})`)
+                    setCopiedFormat('markdown')
+                    setTimeout(() => setCopiedFormat(null), 1400)
+                  }}
+                  onCopyHtml={() => {
+                    navigator.clipboard.writeText(`<img src="${previewUrl}" />`)
+                    setCopiedFormat('html')
+                    setTimeout(() => setCopiedFormat(null), 1400)
+                  }}
+                  onCopyUrl={() => {
+                    navigator.clipboard.writeText(previewUrl)
+                    setCopiedFormat('url')
+                    setTimeout(() => setCopiedFormat(null), 1400)
+                  }}
+                />
               </section>
 
               <SpotifyPanel

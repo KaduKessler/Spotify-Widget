@@ -62,7 +62,7 @@ export default function Button({
   ...props
 }: ButtonProps) {
   const baseStyles =
-    'transition disabled:opacity-60 disabled:cursor-not-allowed'
+    'transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950 disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100'
   const variantStyle = variantStyles[variant]
   const sizeStyle = paddingStyles[size]
   const radiusStyle = getRadius(shape, size)

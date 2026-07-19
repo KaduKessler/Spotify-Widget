@@ -36,7 +36,7 @@ export default function DashboardHeader({
   onLogout,
 }: DashboardHeaderProps) {
   return (
-    <header className="flex flex-col gap-4 rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl px-5 py-4 shadow-[0_20px_90px_rgba(0,0,0,0.45)] sm:flex-row sm:items-center sm:justify-between">
+    <header className="fade-in-up flex flex-col gap-4 rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl px-5 py-4 shadow-[0_20px_90px_rgba(0,0,0,0.45)] sm:flex-row sm:items-center sm:justify-between">
       <div>
         <p className="text-[11px] uppercase tracking-[0.28em] text-emerald-200/80">
           Dashboard
@@ -50,7 +50,7 @@ export default function DashboardHeader({
             href={jsonUrl}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 rounded-full px-2 py-1 hover:text-emerald-300 hover:bg-white/5 transition-colors"
+            className="inline-flex items-center gap-1 rounded-full px-2 py-1 transition-colors duration-150 hover:text-emerald-300 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70"
           >
             JSON
             <ExternalLink aria-hidden="true" className="w-3 h-3" />

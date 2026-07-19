@@ -180,10 +180,7 @@ export async function getTrackDetailsForUser(
   }
 }
 
-export async function getNowPlayingForUser(
-  userId: number,
-  app: FastifyInstance,
-): Promise<{
+type NowPlayingResult = {
   isPlaying: boolean
   track: {
     id: string
@@ -195,7 +192,38 @@ export async function getNowPlayingForUser(
     url: string
   }
   lastPlayedAt?: string
-} | null> {
+} | null
+
+// Cache curto em memória: evita bater na API do Spotify duas vezes
+// (preview do widget + card de now-playing do admin) pro mesmo evento
+// de atualização, que costumam disparar quase simultaneamente.
+const NOW_PLAYING_CACHE_TTL_MS = 3000
+const nowPlayingCache = new Map<
+  number,
+  { data: NowPlayingResult; expiresAt: number }
+>()
+
+export async function getNowPlayingForUser(
+  userId: number,
+  app: FastifyInstance,
+): Promise<NowPlayingResult> {
+  const cached = nowPlayingCache.get(userId)
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data
+  }
+
+  const result = await fetchNowPlayingForUser(userId, app)
+  nowPlayingCache.set(userId, {
+    data: result,
+    expiresAt: Date.now() + NOW_PLAYING_CACHE_TTL_MS,
+  })
+  return result
+}
+
+async function fetchNowPlayingForUser(
+  userId: number,
+  app: FastifyInstance,
+): Promise<NowPlayingResult> {
   const accessToken = await getValidAccessToken(userId, app)
   if (!accessToken) return null
 

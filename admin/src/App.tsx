@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { del, post, postJson, requestJson } from './api/client'
 import DashboardHeader from './components/DashboardHeader'
 import FlagsModal from './components/FlagsModal'
@@ -44,10 +44,20 @@ export default function App() {
   const [previewKey, setPreviewKey] = useState(0)
   const [previewLoading, setPreviewLoading] = useState(true)
 
-  // Aparência customizada do widget (só na URL, não persistida)
+  // Aparência customizada do widget (só na URL, não persistida).
+  // customBg/customColor/customScale = valor "ao vivo" (reflete nos
+  // controles e no redimensionamento CSS instantâneo do preview).
+  // applied* = valor "aplicado", debounced, é o que entra na URL real
+  // do widget (evita 1 fetch por tick de drag do slider/color picker).
   const [customBg, setCustomBg] = useState('')
   const [customColor, setCustomColor] = useState('')
   const [customScale, setCustomScale] = useState(1)
+  const [appliedBg, setAppliedBg] = useState('')
+  const [appliedColor, setAppliedColor] = useState('')
+  const [appliedScale, setAppliedScale] = useState(1)
+  const appearanceRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  )
 
   const [loginUsername, setLoginUsername] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
@@ -203,10 +213,46 @@ export default function App() {
         }>('/api/spotify/now-playing'),
       )
       setNowPlaying(data)
+      if (config?.mode === 'NOW_PLAYING') {
+        setPreviewLoading(true)
+        setPreviewKey((k) => k + 1)
+      }
     } catch (_err) {
       // ignore errors from now-playing
     } finally {
       setLoadingNowPlaying(false)
+    }
+  }, [config])
+
+  // Debounce: evita disparar um fetch novo do SVG a cada tick de drag do
+  // slider/color picker, e garante uma URL sempre nova pro preview (o
+  // cache de imagem do navegador reusa a mesma URL se ela repetir, mesmo
+  // com Cache-Control: no-cache do backend). Também sincroniza o card de
+  // Now Playing do SpotifyPanel quando o modo é NOW_PLAYING.
+  const scheduleAppearanceRefresh = useCallback(
+    (next: { bg: string; color: string; scale: number }) => {
+      setPreviewLoading(true)
+      if (appearanceRefreshTimer.current) {
+        clearTimeout(appearanceRefreshTimer.current)
+      }
+      appearanceRefreshTimer.current = setTimeout(() => {
+        setAppliedBg(next.bg)
+        setAppliedColor(next.color)
+        setAppliedScale(next.scale)
+        setPreviewKey((k) => k + 1)
+        if (config?.mode === 'NOW_PLAYING') {
+          fetchNowPlaying()
+        }
+      }, 400)
+    },
+    [config, fetchNowPlaying],
+  )
+
+  useEffect(() => {
+    return () => {
+      if (appearanceRefreshTimer.current) {
+        clearTimeout(appearanceRefreshTimer.current)
+      }
     }
   }, [])
 
@@ -252,6 +298,9 @@ export default function App() {
       await withMinDuration(postJson('/api/config', cfgToSave))
       setPreviewLoading(true)
       setPreviewKey((k) => k + 1)
+      if (cfgToSave.mode === 'NOW_PLAYING') {
+        fetchNowPlaying()
+      }
     } catch (err) {
       console.error(err)
       setConfigError('Erro ao salvar configuração.')
@@ -391,13 +440,13 @@ export default function App() {
   const widgetUrl = useMemo(() => {
     const base = me ? `/widget?user=${encodeURIComponent(me.id)}` : `/widget`
     const params = new URLSearchParams()
-    if (customBg) params.set('bg', customBg)
-    if (customColor) params.set('color', customColor)
-    if (customScale !== 1) params.set('scale', String(customScale))
+    if (appliedBg) params.set('bg', appliedBg)
+    if (appliedColor) params.set('color', appliedColor)
+    if (appliedScale !== 1) params.set('scale', String(appliedScale))
     const query = params.toString()
     if (!query) return base
     return `${base}${base.includes('?') ? '&' : '?'}${query}`
-  }, [me, customBg, customColor, customScale])
+  }, [me, appliedBg, appliedColor, appliedScale])
 
   const backendBase =
     (import.meta.env.VITE_BACKEND_URL as string) || 'http://127.0.0.1:3000'
@@ -514,16 +563,28 @@ export default function App() {
                   customColor={customColor}
                   customScale={customScale}
                   onChangeCustomBg={(value) => {
-                    setPreviewLoading(true)
                     setCustomBg(value)
+                    scheduleAppearanceRefresh({
+                      bg: value,
+                      color: customColor,
+                      scale: customScale,
+                    })
                   }}
                   onChangeCustomColor={(value) => {
-                    setPreviewLoading(true)
                     setCustomColor(value)
+                    scheduleAppearanceRefresh({
+                      bg: customBg,
+                      color: value,
+                      scale: customScale,
+                    })
                   }}
                   onChangeCustomScale={(value) => {
-                    setPreviewLoading(true)
                     setCustomScale(value)
+                    scheduleAppearanceRefresh({
+                      bg: customBg,
+                      color: customColor,
+                      scale: value,
+                    })
                   }}
                   widgetUrl={widgetUrl}
                   previewUrl={previewUrl}

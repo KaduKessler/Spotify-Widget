@@ -36,7 +36,11 @@ async function refreshSpotifyToken(
   },
   app: FastifyInstance,
 ): Promise<string | null> {
-  if (!user.spotifyRefreshToken || !user.spotifyClientId || !user.spotifyClientSecret) {
+  if (
+    !user.spotifyRefreshToken ||
+    !user.spotifyClientId ||
+    !user.spotifyClientSecret
+  ) {
     return null
   }
 
@@ -50,7 +54,7 @@ async function refreshSpotifyToken(
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Basic ${basicAuth}`,
+        Authorization: `Basic ${basicAuth}`,
       },
       body: new URLSearchParams({
         grant_type: 'refresh_token',
@@ -85,22 +89,10 @@ async function refreshSpotifyToken(
   }
 }
 
-export async function getNowPlayingForUser(
+async function getValidAccessToken(
   userId: number,
   app: FastifyInstance,
-): Promise<{
-  isPlaying: boolean
-  track: {
-    id: string
-    name: string
-    artists: string[]
-    album: string
-    albumArt: string | null
-    uri: string
-    url: string
-  }
-  lastPlayedAt?: string
-} | null> {
+): Promise<string | null> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
@@ -123,16 +115,89 @@ export async function getNowPlayingForUser(
     return null
   }
 
-  let accessToken = user.spotifyAccessToken
-
-  // Verifica se o token expirou
   if (user.spotifyTokenExpiresAt && user.spotifyTokenExpiresAt < new Date()) {
-    const newToken = await refreshSpotifyToken(user, app)
-    if (!newToken) {
-      return null
-    }
-    accessToken = newToken
+    return refreshSpotifyToken(user, app)
   }
+
+  return user.spotifyAccessToken
+}
+
+// Aceita spotify:track:ID, URLs open.spotify.com (com ou sem locale/query) ou id puro
+function extractTrackId(input: string): string | null {
+  const trimmed = input.trim()
+
+  const uriMatch = trimmed.match(/^spotify:track:([a-zA-Z0-9]+)$/)
+  if (uriMatch?.[1]) return uriMatch[1]
+
+  const urlMatch = trimmed.match(
+    /open\.spotify\.com\/(?:intl-[a-z]{2}\/)?track\/([a-zA-Z0-9]+)/,
+  )
+  if (urlMatch?.[1]) return urlMatch[1]
+
+  if (/^[a-zA-Z0-9]+$/.test(trimmed)) return trimmed
+
+  return null
+}
+
+export async function getTrackDetailsForUser(
+  userId: number,
+  trackId: string,
+  app: FastifyInstance,
+): Promise<{
+  id: string
+  name: string
+  artists: string[]
+  album: string
+  albumArt: string | null
+  uri: string
+  url: string
+} | null> {
+  const accessToken = await getValidAccessToken(userId, app)
+  if (!accessToken) return null
+
+  const id = extractTrackId(trackId)
+  if (!id) return null
+
+  try {
+    const response = await fetch(`https://api.spotify.com/v1/tracks/${id}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!response.ok) return null
+
+    const track = (await response.json()) as SpotifyTrack
+    return {
+      id: track.id,
+      name: track.name,
+      artists: track.artists.map((a) => a.name),
+      album: track.album.name,
+      albumArt: track.album.images[0]?.url || null,
+      uri: track.uri,
+      url: track.external_urls.spotify,
+    }
+  } catch (err) {
+    app.log.error({ err, trackId }, 'Failed to fetch track details')
+    return null
+  }
+}
+
+export async function getNowPlayingForUser(
+  userId: number,
+  app: FastifyInstance,
+): Promise<{
+  isPlaying: boolean
+  track: {
+    id: string
+    name: string
+    artists: string[]
+    album: string
+    albumArt: string | null
+    uri: string
+    url: string
+  }
+  lastPlayedAt?: string
+} | null> {
+  const accessToken = await getValidAccessToken(userId, app)
+  if (!accessToken) return null
 
   // Tenta buscar a música atual
   const currentlyPlayingResponse = await fetch(
@@ -176,8 +241,7 @@ export async function getNowPlayingForUser(
   )
 
   if (recentlyPlayedResponse.status === 200) {
-    const data =
-      (await recentlyPlayedResponse.json()) as RecentlyPlayedResponse
+    const data = (await recentlyPlayedResponse.json()) as RecentlyPlayedResponse
 
     if (data.items && data.items.length > 0) {
       const item = data.items[0]
@@ -254,13 +318,14 @@ export async function registerSpotifyNowPlayingRoutes(app: FastifyInstance) {
         'https://api.spotify.com/v1/me/player/currently-playing',
         {
           headers: {
-            'Authorization': `Bearer ${accessToken}`,
+            Authorization: `Bearer ${accessToken}`,
           },
         },
       )
 
       if (currentlyPlayingResponse.status === 200) {
-        const data = (await currentlyPlayingResponse.json()) as CurrentlyPlayingResponse
+        const data =
+          (await currentlyPlayingResponse.json()) as CurrentlyPlayingResponse
 
         if (data.is_playing && data.item) {
           return {
@@ -283,13 +348,14 @@ export async function registerSpotifyNowPlayingRoutes(app: FastifyInstance) {
         'https://api.spotify.com/v1/me/player/recently-played?limit=1',
         {
           headers: {
-            'Authorization': `Bearer ${accessToken}`,
+            Authorization: `Bearer ${accessToken}`,
           },
         },
       )
 
       if (recentlyPlayedResponse.status === 200) {
-        const data = (await recentlyPlayedResponse.json()) as RecentlyPlayedResponse
+        const data =
+          (await recentlyPlayedResponse.json()) as RecentlyPlayedResponse
 
         if (data.items && data.items.length > 0) {
           const item = data.items[0]

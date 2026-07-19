@@ -7,7 +7,10 @@ import {
 } from '../lib/db.js'
 import { renderSvg } from '../lib/svg.js'
 import { parseWidgetConfig } from '../lib/validation.js'
-import { getNowPlayingForUser } from './spotify-now-playing.js'
+import {
+  getNowPlayingForUser,
+  getTrackDetailsForUser,
+} from './spotify-now-playing.js'
 
 async function toDataUri(url: string): Promise<string | undefined> {
   try {
@@ -143,15 +146,27 @@ export async function registerWidgetRoute(app: FastifyInstance) {
       const trackId = cfg.trackId || null
       const source = trackId ? 'fixed' : null
 
+      let fixedTrack: Awaited<ReturnType<typeof getTrackDetailsForUser>> = null
+      if (trackId && user) {
+        try {
+          fixedTrack = await getTrackDetailsForUser(user.id, trackId, app)
+        } catch (err) {
+          app.log.error(
+            { err, username },
+            'Failed to fetch fixed track details',
+          )
+        }
+      }
+
       return {
         username,
         mode: cfg.mode,
         source,
         track: trackId
-          ? {
+          ? (fixedTrack ?? {
               id: trackId,
               url: trackId,
-            }
+            })
           : null,
         updated_at: Date.now(),
       }
@@ -244,6 +259,43 @@ export async function registerWidgetRoute(app: FastifyInstance) {
             app.log.error(
               { err, username },
               'Failed to fetch now playing for widget',
+            )
+          }
+        }
+
+        // Se modo FIXED_TRACK e há trackId configurado
+        if (config.mode === 'FIXED_TRACK' && config.trackId) {
+          try {
+            const fixedTrack = await getTrackDetailsForUser(
+              user.id,
+              config.trackId,
+              app,
+            )
+            if (fixedTrack) {
+              let cover: string | undefined
+              if (fixedTrack.albumArt) {
+                cover =
+                  (await toDataUri(fixedTrack.albumArt)) ||
+                  fixedTrack.albumArt ||
+                  undefined
+              }
+              track = {
+                name: fixedTrack.name,
+                artist: fixedTrack.artists.join(', '),
+                cover_url: cover,
+              }
+
+              if (
+                (query.scan === '1' || query.scan === 'true') &&
+                fixedTrack.uri
+              ) {
+                scanCodeSrc = await getScanCodeDataUri(fixedTrack.uri)
+              }
+            }
+          } catch (err) {
+            app.log.error(
+              { err, username },
+              'Failed to fetch fixed track for widget',
             )
           }
         }

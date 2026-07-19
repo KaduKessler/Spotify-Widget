@@ -18,6 +18,7 @@ export async function registerAuthPlugin(app: FastifyInstance) {
     if (
       url.startsWith('/widget') ||
       url.startsWith('/auth') ||
+      url.startsWith('/user') ||
       url === '/api/auth-config'
     ) {
       return

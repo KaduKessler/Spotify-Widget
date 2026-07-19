@@ -205,14 +205,6 @@ export async function registerWidgetRoute(app: FastifyInstance) {
           config.trackId = userConfig.trackId
         }
 
-        // Permite override de tema via query
-        if (
-          themeOverride &&
-          (themeOverride === 'dark' || themeOverride === 'light')
-        ) {
-          config.theme = themeOverride
-        }
-
         // Se modo NOW_PLAYING e tem Spotify conectado
         if (config.mode === 'NOW_PLAYING' && user.spotifyAccessToken) {
           try {
@@ -252,6 +244,11 @@ export async function registerWidgetRoute(app: FastifyInstance) {
           }
         }
       }
+    }
+
+    // Permite override de tema via query, com ou sem usuário
+    if (themeOverride === 'dark' || themeOverride === 'light') {
+      config.theme = themeOverride
     }
 
     const svg = (

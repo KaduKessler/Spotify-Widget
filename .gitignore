@@ -45,3 +45,5 @@ logs/
 # Admin build
 /admin/dist
 private-docs/
+# Docker: banco SQLite + segredos persistidos no volume
+/data/

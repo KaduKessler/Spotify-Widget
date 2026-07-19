@@ -344,52 +344,59 @@ O script:
 
 ## 🐳 Docker Quickstart
 
-Se encontrar erros de build nativo (`better-sqlite3`) ou preferir isolar tudo em um container, use Docker:
-
-### Preparação
-
-1. Copie o arquivo de exemplo de ambiente:
+Se encontrar erros de build nativo (`better-sqlite3`) ou preferir isolar tudo em um container, use Docker. Não precisa criar `.env` nem gerar segredo antes — sobe direto:
 
 ```bash
-cp .env.example .env
+docker compose up --build -d
 ```
 
-1. Edite `.env` com suas variáveis (mínimo recomendado para desenvolvimento):
+Na primeira execução, se `SESSION_SECRET` e `ADMIN_PASSWORD` não forem definidos, o container gera valores aleatórios sozinho, persiste em `./data` (pra sobreviver a restarts) e imprime o usuário/senha de admin gerados no log:
+
+```bash
+docker compose logs -f app
+```
+
+```text
+================================================================
+ Nenhum ADMIN_PASSWORD definido. Senha gerada pra você:
+
+   usuário: owner
+   senha:   aMrsZxNJL_3i11RY
+
+ Salva em /app/data/.admin_password. Troque depois de logar.
+================================================================
+```
+
+Acesse `http://localhost:3000/admin/` e entre com essas credenciais.
+
+### Customizar
+
+Para fixar suas próprias credenciais em vez das geradas, crie um `.env` na raiz (mesma pasta do `docker-compose.yml`) — o Compose lê automaticamente:
 
 ```env
-SESSION_SECRET=meu_secret_aleatorio_32_chars
-ENABLE_PASSWORD_AUTH=true
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=admin12345
+SESSION_SECRET=gere_com_openssl_rand_hex_32
+ADMIN_USERNAME=seu_usuario
+ADMIN_PASSWORD=sua_senha_forte_min_8_chars
 ENABLE_GITHUB_AUTH=false
 APP_URL=http://localhost:3000
 ADMIN_URL=http://localhost:3000/admin
-ENABLE_HELMET=true
-HELMET_DISABLE_HSTS=true
 ```
 
-### Build e execução
+> `ADMIN_USERNAME=admin` sozinho é rejeitado de propósito (checagem de segurança) — use qualquer outro valor.
+
+### Comandos úteis
 
 ```bash
-# Build da imagem e start do container em background
-docker compose up --build -d
-
-# Ver logs
-docker compose logs -f app
-
-# Parar
-docker compose down
-
-# Parar e remover volumes
-docker compose down -v
+docker compose down          # parar
+docker compose down -v       # parar e remover volumes (apaga o banco!)
+docker compose build --no-cache  # forçar rebuild ignorando cache
 ```
 
 ### Notas
 
-- O compose mapeia `./data:/app/data` para persistir o banco SQLite.
-- A imagem é compilada com suporte a multi-arquitetura (amd64 e arm64).
-- O healthcheck verifica a API a cada 30s.
-- Variáveis com `:-` têm valores padrão (não precisam estar no `.env`).
+- O compose mapeia `./data:/app/data` pra persistir o banco SQLite, o `SESSION_SECRET` e o `ADMIN_PASSWORD` gerados.
+- O healthcheck verifica `/health` a cada 30s.
+- Variáveis com `:-` no compose têm valor padrão (não precisam estar no `.env`).
 
 ## 📝 Variáveis de Ambiente Completas
 

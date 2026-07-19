@@ -1,0 +1,13 @@
+**/node_modules
+**/dist
+backend/data
+backend/src/generated
+admin/dist
+.env
+.env.*
+!.env.example
+.git
+.vscode
+*.log
+private-docs
+postman

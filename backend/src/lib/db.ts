@@ -3,7 +3,7 @@ import {
   PrismaClient,
   type User as PrismaUser,
   type WidgetConfig as PrismaWidgetConfig,
-} from '../generated/prisma-client/client'
+} from '../generated/prisma-client/client.js'
 
 // Singleton pattern para Prisma Client
 const globalForPrisma = globalThis as unknown as {

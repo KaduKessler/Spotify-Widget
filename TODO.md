@@ -9,7 +9,7 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 | --- | --- |
 | 1. Foundation | ✅ Concluído |
 | 2. Security Hardening | ✅ Concluído |
-| 3. Registration Policies | 🟡 Parcial — enforcement básico existe, falta fluxo de invite token de verdade |
+| 3. Registration Policies | ✅ Concluído — `open`/`github_whitelist`/`closed` funcionam; invite token avaliado e descartado por decisão |
 | 4. Spotify Per-User | ✅ Concluído — credenciais e tokens criptografados em repouso |
 | 5. Widget Features | ✅ Concluído |
 | 6. Frontend Refactoring | ✅ Concluído — estado extraído em hooks, tema do painel descartado por decisão |
@@ -99,18 +99,14 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 
 ### Registration Policy: Invite Tokens
 
-- [x] `REGISTRATION_POLICY=invite_only` bloqueia GitHub com 403 (`auth-github.ts`), mas é só um bloqueio duro: não existe token de convite de verdade ainda
-- [ ] Nova rota: `POST /auth/invite/create` (admin only, retorna token)
-- [ ] Nova rota: `POST /auth/invite/redeem/:token` (qualquer um, cria user)
-- [ ] Token: armazenar em tabela `InviteToken` (token, expiresAt, createdBy, usedBy, usedAt)
-- [ ] Validar expiração (ex: 7 dias) e se já foi usado
-- [ ] Após uso, marcar como usado e guardar username que resgatou
+- [x] `REGISTRATION_POLICY=invite_only` bloqueia GitHub com 403 (`auth-github.ts`)
+- [x] ~~Sistema de token de convite (create/redeem)~~ — avaliado e descartado por decisão: `/api/admin/users` já cobre a necessidade real (admin cria conta por senha pra quem precisar). Token de convite só mudaria quem escolhe a senha, sem resolver dor nenhuma nesse projeto (instância única, um admin, poucos usuários)
 
 ### Registration Policy: Closed
 
 - [x] `REGISTRATION_POLICY=closed` bloqueia GitHub com 403 (`auth-github.ts`)
 - [x] Só bloqueia signup novo, login de quem já tem conta passa normal
-- [ ] Admin criar contas manualmente (sem rota ainda)
+- [x] Admin criar contas manualmente: `POST /api/admin/users` (`admin-users.ts`), já existia quando esse item foi escrito
 
 ---
 
@@ -289,4 +285,6 @@ allowlist do hook de auth (`plugins/auth.ts`). Corrigido + testado.
 
 ## 🎯 Próximos passos sugeridos
 
-1. Sistema de invite token de verdade, se a policy for pra valer (Fase 3)
+Todas as 8 fases concluídas. O que resta é só o backlog acima (Nice to
+Have / Accessibility / Advanced Features), nenhum item crítico pendente.
+Sem próximo passo recomendado até surgir uma necessidade real.

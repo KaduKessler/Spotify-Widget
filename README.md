@@ -400,6 +400,10 @@ ADMIN_URL=http://127.0.0.1:5173
 # === Session ===
 SESSION_SECRET=chave_aleatoria_segura_aqui  # min. 32 chars em produção; gere com: openssl rand -hex 32
 
+# === Criptografia ===
+# Criptografa client secret e tokens OAuth do Spotify em repouso no banco.
+ENCRYPTION_KEY=chave_hex_64_chars_aqui  # gere com: openssl rand -hex 32
+
 # === Security Headers ===
 # Ative Helmet em produção para enviar headers de segurança.
 # Se você usa um reverse proxy (Nginx Proxy Manager/Cloudflare) que já envia HSTS,

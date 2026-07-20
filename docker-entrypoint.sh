@@ -18,6 +18,20 @@ if [ -z "$SESSION_SECRET" ]; then
   export SESSION_SECRET
 fi
 
+# Mesma ideia pra ENCRYPTION_KEY (criptografa credenciais Spotify em
+# repouso): gera e persiste sozinha, sem imprimir no log — não é
+# credencial que o usuário precisa copiar, só existe.
+ENCRYPTION_KEY_FILE=/app/data/.encryption_key
+if [ -z "$ENCRYPTION_KEY" ]; then
+  if [ -f "$ENCRYPTION_KEY_FILE" ]; then
+    ENCRYPTION_KEY="$(cat "$ENCRYPTION_KEY_FILE")"
+  else
+    ENCRYPTION_KEY="$(node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))")"
+    echo "$ENCRYPTION_KEY" > "$ENCRYPTION_KEY_FILE"
+  fi
+  export ENCRYPTION_KEY
+fi
+
 # Mesma ideia pro ADMIN_PASSWORD, quando password auth está ligado e
 # ninguém definiu uma senha própria: gera, persiste e imprime uma vez
 # no log (só na primeira execução) pra dar pra copiar e logar.

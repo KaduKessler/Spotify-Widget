@@ -16,6 +16,7 @@ services:
       # Sem valor: o container gera e persiste em ./data na primeira
       # execução (não precisa rodar openssl na mão pra testar).
       SESSION_SECRET: ${SESSION_SECRET:-}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
 
       ENABLE_PASSWORD_AUTH: ${ENABLE_PASSWORD_AUTH:-true}

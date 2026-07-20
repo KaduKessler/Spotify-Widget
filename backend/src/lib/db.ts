@@ -4,10 +4,42 @@ import {
   type User as PrismaUser,
   type WidgetConfig as PrismaWidgetConfig,
 } from '../generated/prisma-client/client.js'
+import { decrypt, encrypt } from './crypto.js'
+
+// Campos sensíveis de verdade (client secret + tokens OAuth). spotifyClientId
+// fica em texto puro de propósito: é o identificador público do app, não segredo.
+const ENCRYPTED_USER_FIELDS = [
+  'spotifyClientSecret',
+  'spotifyAccessToken',
+  'spotifyRefreshToken',
+] as const
+
+function encryptFields(data: Record<string, unknown> | undefined) {
+  if (!data) return
+  for (const field of ENCRYPTED_USER_FIELDS) {
+    if (typeof data[field] === 'string') {
+      data[field] = encrypt(data[field] as string)
+    }
+  }
+}
+
+function decryptResult(result: unknown) {
+  if (!result || typeof result !== 'object') return
+  if (Array.isArray(result)) {
+    for (const item of result) decryptResult(item)
+    return
+  }
+  const record = result as Record<string, unknown>
+  for (const field of ENCRYPTED_USER_FIELDS) {
+    if (typeof record[field] === 'string') {
+      record[field] = decrypt(record[field] as string)
+    }
+  }
+}
 
 // Singleton pattern para Prisma Client
 const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
+  prisma: ReturnType<typeof buildPrismaClient> | undefined
 }
 
 // Adapter obrigatório no Prisma v7 (engineType "client")
@@ -15,12 +47,40 @@ const adapter = new PrismaBetterSqlite3({
   url: process.env.DATABASE_URL ?? 'file:./data/db.sqlite',
 })
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
+function buildPrismaClient() {
+  const base = new PrismaClient({
     adapter,
     log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
   })
+
+  // Criptografa credenciais Spotify na escrita, descriptografa na leitura,
+  // de forma transparente pra todo mundo que importa `prisma` daqui.
+  return base.$extends({
+    query: {
+      user: {
+        async $allOperations({ operation, args, query }) {
+          const writeArgs = args as {
+            data?: Record<string, unknown>
+            create?: Record<string, unknown>
+            update?: Record<string, unknown>
+          }
+          if (operation === 'create' || operation === 'update') {
+            encryptFields(writeArgs.data)
+          } else if (operation === 'upsert') {
+            encryptFields(writeArgs.create)
+            encryptFields(writeArgs.update)
+          }
+
+          const result = await query(args)
+          decryptResult(result)
+          return result
+        },
+      },
+    },
+  })
+}
+
+export const prisma = globalForPrisma.prisma ?? buildPrismaClient()
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 

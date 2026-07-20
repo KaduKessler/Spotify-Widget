@@ -10,7 +10,7 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 | 1. Foundation | ✅ Concluído |
 | 2. Security Hardening | ✅ Concluído |
 | 3. Registration Policies | 🟡 Parcial — enforcement básico existe, falta fluxo de invite token de verdade |
-| 4. Spotify Per-User | 🟡 Quase completo — falta encriptar credenciais em repouso |
+| 4. Spotify Per-User | ✅ Concluído — credenciais e tokens criptografados em repouso |
 | 5. Widget Features | 🟡 Quase completo — cache de busca de tracks não existe (só dedupe de 3s) |
 | 6. Frontend Refactoring | 🟡 Parcial — falta extrair hooks e tema claro/escuro do painel |
 | 7. Testing & Quality | ✅ Concluído — Vitest + husky, cobre auth/config/rate limit/multi-user |
@@ -120,7 +120,7 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 
 - [x] `spotifyClientId`, `spotifyClientSecret` na tabela `User`
 - [x] `spotifyRefreshToken`, `spotifyAccessToken`, `spotifyTokenExpiresAt` (tokens OAuth do usuário)
-- [ ] **Criptografia**: hoje armazenado em texto puro, secret mascarado só na exibição (UI). Encriptar em repouso continua pendente
+- [x] **Criptografia**: `spotifyClientSecret`/`spotifyAccessToken`/`spotifyRefreshToken` criptografados em repouso (AES-256-GCM via Prisma Client Extension em `lib/db.ts`, transparente pras rotas). `spotifyClientId` fica em texto puro de propósito, não é segredo. Sem migração manual: descriptografia tolera valor legado em texto puro e reencripta na próxima escrita natural (refresh de token, ou re-salvar no painel)
 
 ### Admin UI
 
@@ -286,6 +286,5 @@ allowlist do hook de auth (`plugins/auth.ts`). Corrigido + testado.
 
 ## 🎯 Próximos passos sugeridos
 
-1. Encriptar credenciais Spotify em repouso (Fase 4)
-2. Sistema de invite token de verdade, se a policy for pra valer (Fase 3)
-3. Extrair estado do `App.tsx` pra hooks (`useSession`, `useAuth` etc) (Fase 6)
+1. Sistema de invite token de verdade, se a policy for pra valer (Fase 3)
+2. Extrair estado do `App.tsx` pra hooks (`useSession`, `useAuth` etc) (Fase 6)

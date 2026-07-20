@@ -13,6 +13,8 @@ export default defineConfig({
       NODE_ENV: 'test',
       DATABASE_URL: 'file:./data/test.sqlite',
       SESSION_SECRET: 'test-session-secret-not-for-production-use',
+      ENCRYPTION_KEY:
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
       ENABLE_PASSWORD_AUTH: 'true',
       ENABLE_GITHUB_AUTH: 'true',
       ENABLE_NONE_AUTH: 'false',

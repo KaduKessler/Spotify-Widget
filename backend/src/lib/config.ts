@@ -1,5 +1,9 @@
 import 'dotenv/config'
 
+// Só usada em dev quando ENCRYPTION_KEY não foi definida. Nunca válida em produção
+// (validateConfig rejeita chave que não veio de ENCRYPTION_KEY de verdade).
+const DEV_ENCRYPTION_KEY = '0'.repeat(64)
+
 function parseBoolean(
   value: string | undefined,
   defaultValue: boolean,
@@ -70,6 +74,17 @@ function validateConfig(config: ReturnType<typeof buildConfig>) {
     )
   }
 
+  // Validar encryption key em produção (criptografa credenciais Spotify em repouso)
+  if (
+    config.NODE_ENV === 'production' &&
+    (config.ENCRYPTION_KEY === DEV_ENCRYPTION_KEY ||
+      !/^[0-9a-fA-F]{64}$/.test(config.ENCRYPTION_KEY))
+  ) {
+    errors.push(
+      'ENCRYPTION_KEY must be a 64-char hex string in production. Generate with: openssl rand -hex 32',
+    )
+  }
+
   if (errors.length > 0) {
     console.error('\n❌ Configuration errors:\n')
     for (const error of errors) {
@@ -111,6 +126,7 @@ function buildConfig() {
       ALLOW_PASSWORD_SIGNUP: true,
       ADMIN_USERS: [] as string[],
       SESSION_SECRET: process.env.SESSION_SECRET || 'devSessionSecret',
+      ENCRYPTION_KEY: process.env.ENCRYPTION_KEY || DEV_ENCRYPTION_KEY,
       NODE_ENV: process.env.NODE_ENV || 'development',
       ADMIN_USERNAME: process.env.ADMIN_USERNAME || 'admin',
       ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'admin',
@@ -148,6 +164,7 @@ function buildConfig() {
           .filter(Boolean)
       : ([] as string[]),
     SESSION_SECRET: process.env.SESSION_SECRET || 'devSessionSecret',
+    ENCRYPTION_KEY: process.env.ENCRYPTION_KEY || DEV_ENCRYPTION_KEY,
     NODE_ENV: process.env.NODE_ENV || 'development',
     ADMIN_USERNAME: process.env.ADMIN_USERNAME || 'admin',
     ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'admin',
@@ -174,6 +191,11 @@ export function loadConfig() {
     if (config.SESSION_SECRET === 'devSessionSecret') {
       console.warn(
         '⚠️  Warning: Using default SESSION_SECRET. Change it in production!',
+      )
+    }
+    if (config.ENCRYPTION_KEY === DEV_ENCRYPTION_KEY) {
+      console.warn(
+        '⚠️  Warning: Using default ENCRYPTION_KEY. Change it in production!',
       )
     }
     const validPolicies = ['open', 'github_whitelist', 'invite_only', 'closed']

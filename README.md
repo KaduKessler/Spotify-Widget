@@ -60,8 +60,8 @@ O backend serve duas coisas: a rota pública `/widget` (o SVG) e o painel `/admi
 **A forma mais rápida:**
 
 ```bash
-git clone https://github.com/KaduKessler/Spotify-Readme.git
-cd Spotify-Readme
+git clone https://github.com/KaduKessler/Spotify-Widget.git
+cd Spotify-Widget
 docker compose up --build -d
 ```
 
@@ -79,8 +79,8 @@ Sem `.env`, sem segredo pra gerar na mão. Na primeira execução, o container c
 ### Instalação
 
 ```bash
-git clone https://github.com/KaduKessler/Spotify-Readme.git
-cd Spotify-Readme
+git clone https://github.com/KaduKessler/Spotify-Widget.git
+cd Spotify-Widget
 
 pnpm install
 
@@ -296,7 +296,7 @@ docker compose build --no-cache  # forçar rebuild ignorando cache
 ## 📦 Estrutura do projeto
 
 ```text
-Spotify-Readme/
+Spotify-Widget/
 ├── Dockerfile             # Build multi-stage (admin + backend num container)
 ├── docker-compose.yml     # Deploy em 1 comando
 ├── docker-entrypoint.sh   # Migrations + geração de secrets na 1ª execução

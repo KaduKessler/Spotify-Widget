@@ -12,7 +12,7 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 | 3. Registration Policies | 🟡 Parcial — enforcement básico existe, falta fluxo de invite token de verdade |
 | 4. Spotify Per-User | ✅ Concluído — credenciais e tokens criptografados em repouso |
 | 5. Widget Features | ✅ Concluído |
-| 6. Frontend Refactoring | 🟡 Parcial — falta extrair hooks e tema claro/escuro do painel |
+| 6. Frontend Refactoring | ✅ Concluído — estado extraído em hooks, tema do painel descartado por decisão |
 | 7. Testing & Quality | ✅ Concluído — Vitest + husky, cobre auth/config/rate limit/multi-user |
 | 8. CI/CD & Deploy | ✅ Concluído — CI completo + imagem publicada no GHCR + versionamento por tag |
 
@@ -170,13 +170,15 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
   `DashboardHeader`, `LoginScreen`, `TabNav`, `WidgetEditorCard` (editor + preview juntos),
   `SpotifyPanel`, `NowPlayingCard`, `UsersPanel`, `GitHubWhitelistPanel`, `FlagsModal`,
   `Button`/`ModalShell`/`Toggle`/`Segmented`/`DataTable`/`ColorPicker` (compartilhados)
-- [ ] Separar em hooks (`useSession`, `useAuth`, `useConfig`, `useSpotify`): estado ainda vive
-  centralizado em `App.tsx` e é passado via props, funciona mas não foi extraído em hooks
+- [x] Separado em hooks (`useAuth`, `useSpotify`, `useWidgetConfig`): `App.tsx` caiu de ~420 pra
+  ~200 linhas, virou só composição de hooks + JSX. `useSession` não virou hook separado porque a
+  sessão (`me`) e as ações de login/logout são o mesmo domínio de `useAuth`, não fazia sentido
+  partir os dois
 
 ### Styling & UX
 
 - [x] Design consistente (glass cards, paleta única, motion, foco/contraste WCAG AA)
-- [ ] Tema claro/escuro do próprio painel (o widget gerado tem dark/light, o painel em si é só dark)
+- [x] ~~Tema claro/escuro do próprio painel~~ — avaliado e descartado por decisão: painel só-dark está adequado como está, não é regressão nem lacuna real
 - [x] Responsividade mobile (header, tabs, cards testados e ajustados)
 - [x] Feedback visual: loading states (skeleton, min-duration), mensagens de erro/sucesso inline
 
@@ -288,4 +290,3 @@ allowlist do hook de auth (`plugins/auth.ts`). Corrigido + testado.
 ## 🎯 Próximos passos sugeridos
 
 1. Sistema de invite token de verdade, se a policy for pra valer (Fase 3)
-2. Extrair estado do `App.tsx` pra hooks (`useSession`, `useAuth` etc) (Fase 6)

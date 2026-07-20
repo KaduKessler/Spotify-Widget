@@ -14,7 +14,7 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 | 5. Widget Features | 🟡 Quase completo — cache de busca de tracks não existe (só dedupe de 3s) |
 | 6. Frontend Refactoring | 🟡 Parcial — falta extrair hooks e tema claro/escuro do painel |
 | 7. Testing & Quality | ✅ Concluído — Vitest + husky, cobre auth/config/rate limit/multi-user |
-| 8. CI/CD & Deploy | 🟡 Parcial — docs prontas, GitHub Actions não existe |
+| 8. CI/CD & Deploy | ✅ Concluído — CI completo + imagem publicada no GHCR + versionamento por tag |
 
 ---
 
@@ -216,19 +216,32 @@ frontend ainda.
 
 ## 🚀 Fase 8: CI/CD & Deploy
 
+`.github/workflows/ci.yml`: lint (Biome) + typecheck + testes + build dos dois
+pacotes + `pnpm audit`, em todo push/PR. Job separado builda e publica a
+imagem Docker no GHCR.
+
 ### GitHub Actions
 
-- [ ] Build: tsc + build frontend
-- [ ] Test: rodar suite de testes
-- [ ] Lint: ESLint check
-- [ ] Deploy: staging/prod (após approval)
+- [x] Build: `tsc`/`tsc -b` + build do frontend (job `test`)
+- [x] Test: roda a suite Vitest do backend (job `test`)
+- [x] Lint: `biome ci` (substitui o ESLint, que nunca foi usado neste projeto)
+- [x] Publica imagem Docker no GHCR (job `docker-image`) só em push de tag `vX.Y.Z`, com tags semver (`latest`/`vX.Y.Z`/`vX.Y`/`vX`). Push em `main` sem tag só builda pra validar o `Dockerfile`, não publica nada. Sem staging/prod de verdade — projeto é self-hosted, não tem servidor próprio pra apontar um deploy automático
+
+### Versionamento
+
+- [x] `package.json` dos 3 pacotes sincronizados em `1.0.0`
+- [x] Release = `git tag vX.Y.Z && git push origin vX.Y.Z` (documentado no README)
 
 ### Documentation
 
 - [x] README.md completo (revisado contra o código real, com diagrama Mermaid)
-- [x] Como hospedar self-hosted (coberto na seção "🐳 Docker" do README, sem arquivo separado)
-- [ ] API.md (documentar endpoints)
+- [x] Como hospedar self-hosted (seção "🐳 Docker" do README + variante "sem clonar o repo" com a imagem do GHCR)
+- [x] `API.md` (rotas reais, agrupadas por área, com requisito de auth de cada uma)
 - [x] Diagrama de fluxo (Mermaid, embutido no README, sem arquivo ARCHITECTURE.md separado)
+
+**Bug achado escrevendo o `API.md`**: `GET /api/whitelist/:username` tinha
+comentário "público" no código mas retornava 401 de verdade — não tava na
+allowlist do hook de auth (`plugins/auth.ts`). Corrigido + testado.
 
 ---
 
@@ -273,6 +286,6 @@ frontend ainda.
 
 ## 🎯 Próximos passos sugeridos
 
-1. GitHub Actions básico (build + lint + typecheck + test) agora que a suite existe (Fase 8)
-2. Encriptar credenciais Spotify em repouso (Fase 4)
-3. Sistema de invite token de verdade, se a policy for pra valer (Fase 3)
+1. Encriptar credenciais Spotify em repouso (Fase 4)
+2. Sistema de invite token de verdade, se a policy for pra valer (Fase 3)
+3. Extrair estado do `App.tsx` pra hooks (`useSession`, `useAuth` etc) (Fase 6)

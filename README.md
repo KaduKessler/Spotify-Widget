@@ -293,6 +293,19 @@ docker compose build --no-cache  # forçar rebuild ignorando cache
 
 </details>
 
+### Sem clonar o repo
+
+Só rodar, sem baixar código nem buildar nada:
+
+```bash
+docker run -d --name spotify-widget \
+  -p 3000:3000 \
+  -v ./data:/app/data \
+  ghcr.io/kadukessler/spotify-widget:latest
+```
+
+Mesmas variáveis de ambiente da seção acima (`-e SESSION_SECRET=... -e ADMIN_USERNAME=...` etc, ou um `--env-file .env`). `latest` segue a versão estável mais recente (tag `vX.Y.Z`); imagem também publicada com tags de versão fixa pra quem quiser pinar (`:v1.0.0`, `:v1`, `:v1.0`).
+
 ## 📦 Estrutura do projeto
 
 ```text
@@ -342,6 +355,15 @@ pnpm build   # build de produção
 ```
 
 </details>
+
+**CI**: todo push/PR roda lint, typecheck, testes, build dos dois pacotes e valida que o `Dockerfile` builda ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)). Nada é publicado nesses pushes — só builda. Pra publicar uma versão de verdade no GHCR:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+Isso builda e publica `ghcr.io/kadukessler/spotify-widget` com as tags `latest`, `v1.0.0`, `v1.0` e `v1`.
 
 ## 📝 Variáveis de ambiente
 

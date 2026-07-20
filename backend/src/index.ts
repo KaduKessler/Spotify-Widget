@@ -117,8 +117,17 @@ export async function buildApp(): Promise<FastifyInstance> {
               directives: {
                 defaultSrc: ["'self'"],
                 scriptSrc: ["'self'"],
-                styleSrc: ["'self'", "'unsafe-inline'"],
-                imgSrc: ["'self'", 'data:'],
+                styleSrc: [
+                  "'self'",
+                  "'unsafe-inline'",
+                  'https://fonts.googleapis.com',
+                ],
+                imgSrc: [
+                  "'self'",
+                  'data:',
+                  'https://avatars.githubusercontent.com',
+                  'https://github.com',
+                ],
                 connectSrc: ["'self'"],
               },
             }

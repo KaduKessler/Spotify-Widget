@@ -16,6 +16,7 @@ export async function registerAuthPlugin(app: FastifyInstance) {
 
     // Rotas sempre públicas:
     if (
+      url === '/' ||
       url.startsWith('/widget') ||
       url.startsWith('/auth') ||
       url.startsWith('/user') ||

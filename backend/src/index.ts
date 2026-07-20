@@ -74,6 +74,10 @@ export async function buildApp(): Promise<FastifyInstance> {
   })
 
   // Health check endpoints
+  app.get('/', async (_req, reply) => {
+    return reply.redirect('/admin/')
+  })
+
   app.get('/health', async () => {
     return { status: 'ok', timestamp: new Date().toISOString() }
   })

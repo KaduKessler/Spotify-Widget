@@ -1,5 +1,6 @@
 import { Check, Copy, ExternalLink, ShieldCheck } from 'lucide-react'
 import Button from './Button'
+import ColorPicker from './ColorPicker'
 import Segmented from './Segmented'
 
 type Config = {
@@ -39,26 +40,6 @@ export type WidgetEditorCardProps = {
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return <span className="text-xs text-neutral-400">{children}</span>
-}
-
-function ColorSwatch({
-  value,
-  onChange,
-  label,
-}: {
-  value: string
-  onChange: (hex: string) => void
-  label: string
-}) {
-  return (
-    <input
-      type="color"
-      aria-label={label}
-      value={`#${value}`}
-      onChange={(e) => onChange(e.target.value.slice(1))}
-      className="h-8 w-9 shrink-0 cursor-pointer rounded-lg border border-white/10 bg-transparent transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70 [&::-webkit-color-swatch]:rounded-md [&::-webkit-color-swatch]:border-none [&::-webkit-color-swatch-wrapper]:p-0.5"
-    />
-  )
 }
 
 function EmbedChip({
@@ -117,12 +98,17 @@ export default function WidgetEditorCard({
   onCopyHtml,
   onCopyUrl,
 }: WidgetEditorCardProps) {
-  const bgMode =
-    customBg === 'transparent' ? 'transparent' : customBg ? 'custom' : 'default'
+  const bgMode: 'dark' | 'light' | 'transparent' | 'custom' =
+    customBg === 'transparent'
+      ? 'transparent'
+      : customBg
+        ? 'custom'
+        : config.theme
   const previewSrc = `${widgetUrl}${widgetUrl.includes('?') ? '&' : '?'}_=${previewKey}`
 
   return (
     <div
+      data-widget-card
       className="fade-in-up overflow-hidden rounded-3xl border border-white/8 bg-neutral-900/70 backdrop-blur-xl shadow-[0_20px_90px_rgba(0,0,0,0.45)]"
       style={{ animationDelay: '60ms', animationFillMode: 'backwards' }}
     >
@@ -231,19 +217,6 @@ export default function WidgetEditorCard({
             )}
           </div>
 
-          <div className="space-y-2">
-            <FieldLabel>Tema</FieldLabel>
-            <Segmented
-              className="w-full"
-              value={config.theme}
-              onChange={onChangeTheme}
-              options={[
-                { value: 'dark', label: 'Dark' },
-                { value: 'light', label: 'Light' },
-              ]}
-            />
-          </div>
-
           <hr className="border-white/10" />
 
           <div className="space-y-2">
@@ -253,19 +226,27 @@ export default function WidgetEditorCard({
                 className="flex-1"
                 value={bgMode}
                 onChange={(mode) => {
-                  if (mode === 'default') onChangeCustomBg('')
-                  else if (mode === 'transparent')
+                  if (mode === 'dark' || mode === 'light') {
+                    onChangeCustomBg('')
+                    onChangeTheme(mode)
+                  } else if (mode === 'transparent') {
                     onChangeCustomBg('transparent')
-                  else onChangeCustomBg(customBg || '151b23')
+                  } else {
+                    onChangeCustomBg(
+                      customBg ||
+                        (config.theme === 'light' ? 'fef3c7' : '1e3a2f'),
+                    )
+                  }
                 }}
                 options={[
-                  { value: 'default', label: 'Padrão' },
+                  { value: 'dark', label: 'Dark' },
+                  { value: 'light', label: 'Light' },
                   { value: 'transparent', label: 'Transp.' },
                   { value: 'custom', label: 'Cor' },
                 ]}
               />
               {bgMode === 'custom' && (
-                <ColorSwatch
+                <ColorPicker
                   label="Cor de fundo"
                   value={customBg}
                   onChange={onChangeCustomBg}
@@ -291,7 +272,7 @@ export default function WidgetEditorCard({
                 ]}
               />
               {customColor && (
-                <ColorSwatch
+                <ColorPicker
                   label="Cor do texto"
                   value={customColor}
                   onChange={onChangeCustomColor}

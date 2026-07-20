@@ -88,3 +88,23 @@ button {
 #root {
   @apply min-h-screen;
 }
+
+.react-colorful {
+  width: 100% !important;
+}
+
+.react-colorful__saturation {
+  border-radius: 0;
+}
+
+.react-colorful__hue {
+  height: 1rem;
+  margin-top: 0;
+  border-radius: 0;
+}
+
+.react-colorful__hue-pointer,
+.react-colorful__saturation-pointer {
+  width: 1rem;
+  height: 1rem;
+}

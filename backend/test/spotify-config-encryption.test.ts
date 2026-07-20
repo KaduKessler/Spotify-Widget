@@ -28,7 +28,7 @@ describe('Credenciais Spotify criptografadas em repouso', () => {
     expect(post.statusCode).toBe(200)
 
     // Lê a coluna direto do arquivo SQLite, sem passar pela extensão do
-    // Prisma que descriptografa — prova que o valor em disco é diferente.
+    // Prisma que descriptografa. Prova que o valor em disco é diferente.
     const db = new Database('./data/test.sqlite', { readonly: true })
     const row = db
       .prepare('SELECT spotify_client_secret FROM users WHERE username = ?')
@@ -40,7 +40,7 @@ describe('Credenciais Spotify criptografadas em repouso', () => {
     expect(row?.spotify_client_secret?.split(':')).toHaveLength(3)
 
     // Via API (que passa pela extensão), o GET continua funcionando
-    // normalmente — só mostra os últimos 4 chars mascarados.
+    // normalmente, só mostra os últimos 4 chars mascarados.
     const get = await app.inject({
       method: 'GET',
       url: '/api/spotify-config',

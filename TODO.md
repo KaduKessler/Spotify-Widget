@@ -196,6 +196,7 @@ frontend ainda.
 - [x] Validação de CSRF state no callback do GitHub (ausente, inválido, válido)
 - [x] Rate limit behavior (`/auth/login` retorna 429 após o limite)
 - [x] Políticas de registro: `closed`/`invite_only` bloqueiam signup mas não login existente, `github_whitelist` bloqueia quem não tá na lista
+- [x] Criptografia: roundtrip, IV único, tolerância a valor legado, dado adulterado, e validação de `ENCRYPTION_KEY`/`SESSION_SECRET` em produção (`loadConfig()` rejeita ausente/inválida/default de dev)
 
 ### Integration Tests
 

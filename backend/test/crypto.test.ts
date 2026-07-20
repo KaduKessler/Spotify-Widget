@@ -27,4 +27,18 @@ describe('crypto', () => {
       expect(part).toMatch(/^[0-9a-f]+$/)
     }
   })
+
+  it('dado adulterado (formato certo, auth tag inválida) não lança erro', () => {
+    const encrypted = encrypt('valor-original')
+    const [iv, , cipher] = encrypted.split(':')
+    const tamperedTag = 'a'.repeat(32)
+    const tampered = `${iv}:${tamperedTag}:${cipher}`
+
+    // Comportamento atual: cai no mesmo fallback do valor legado e
+    // devolve a string adulterada como está, sem distinguir "isso é
+    // texto puro antigo" de "isso foi corrompido". Documenta o
+    // comportamento real, não valida que seja o ideal.
+    expect(() => decrypt(tampered)).not.toThrow()
+    expect(decrypt(tampered)).toBe(tampered)
+  })
 })

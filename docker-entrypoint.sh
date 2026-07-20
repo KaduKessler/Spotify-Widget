@@ -19,7 +19,7 @@ if [ -z "$SESSION_SECRET" ]; then
 fi
 
 # Mesma ideia pra ENCRYPTION_KEY (criptografa credenciais Spotify em
-# repouso): gera e persiste sozinha, sem imprimir no log — não é
+# repouso): gera e persiste sozinha, sem imprimir no log. Não é
 # credencial que o usuário precisa copiar, só existe.
 ENCRYPTION_KEY_FILE=/app/data/.encryption_key
 if [ -z "$ENCRYPTION_KEY" ]; then

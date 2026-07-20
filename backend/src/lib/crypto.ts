@@ -4,9 +4,9 @@ import { loadConfig } from './config.js'
 const ALGORITHM = 'aes-256-gcm'
 const IV_LENGTH = 12
 
-// loadConfig() já é chamada uma vez por chamada (não memoizada) e imprime
-// warnings de dev — cacheia a chave aqui pra não repetir isso a cada
-// encrypt/decrypt (podem ser centenas, no polling do now-playing).
+// loadConfig() não é memoizada e imprime warnings de dev a cada chamada.
+// Cacheia a chave aqui pra não repetir isso em todo encrypt/decrypt
+// (podem ser centenas, no polling do now-playing).
 let cachedKey: Buffer | undefined
 
 function getKey(): Buffer {
@@ -35,8 +35,8 @@ export function encrypt(plain: string): string {
 
 /**
  * Formato legado (pré-criptografia): texto puro, sem os dois `:`
- * separadores. Devolve como está em vez de tentar descriptografar —
- * autoconverge na próxima escrita natural do campo.
+ * separadores. Devolve como está em vez de tentar descriptografar.
+ * Autoconverge na próxima escrita natural do campo.
  */
 export function decrypt(value: string): string {
   const parts = value.split(':')

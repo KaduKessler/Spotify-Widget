@@ -17,7 +17,8 @@ export async function registerSpotifyAuthRoutes(app: FastifyInstance) {
       return reply.status(401).send({ error: 'Invalid session' })
     }
 
-    const username = unsign.value
+    // Cookie de sessão vem como `username:role`
+    const username = unsign.value.split(':')[0] as string
 
     const user = await getUserByUsername(username)
     if (!user) {

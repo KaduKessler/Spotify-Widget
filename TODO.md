@@ -225,6 +225,7 @@ imagem Docker no GHCR.
 - [x] Test: roda a suite Vitest do backend (job `test`)
 - [x] Lint: `biome ci` (substitui o ESLint, que nunca foi usado neste projeto)
 - [x] Publica imagem Docker no GHCR (job `docker-image`) só em push de tag `vX.Y.Z`, com tags semver (`latest`/`vX.Y.Z`/`vX.Y`/`vX`). Push em `main` sem tag só builda pra validar o `Dockerfile`, não publica nada. Sem staging/prod de verdade — projeto é self-hosted, não tem servidor próprio pra apontar um deploy automático
+- [x] Multi-arch (`linux/amd64` + `linux/arm64`, via QEMU) — achado no deploy real: servidor de produção é ARM (Oracle Cloud Ampere), imagem só-amd64 não rodava lá. Multi-arch só em push de tag (build cross-arch é bem mais lento, não compensa pra validação de PR)
 
 ### Versionamento
 

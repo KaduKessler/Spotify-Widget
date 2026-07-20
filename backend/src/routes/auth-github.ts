@@ -1,7 +1,11 @@
 import { randomBytes, timingSafeEqual } from 'node:crypto'
 import type { FastifyInstance } from 'fastify'
 import { loadConfig } from '../lib/config.js'
-import { isGitHubWhitelisted, upsertUser } from '../lib/db.js'
+import {
+  getUserByUsername,
+  isGitHubWhitelisted,
+  upsertUser,
+} from '../lib/db.js'
 
 export async function registerGithubAuthRoutes(app: FastifyInstance) {
   const env = loadConfig()
@@ -111,11 +115,12 @@ export async function registerGithubAuthRoutes(app: FastifyInstance) {
       avatar_url?: string
     }
 
-    // Políticas de registro
-    if (env.REGISTRATION_POLICY === 'closed') {
+    // Políticas de registro: só bloqueiam signup novo, não login de quem já tem conta
+    const existingUser = await getUserByUsername(user.login)
+    if (!existingUser && env.REGISTRATION_POLICY === 'closed') {
       return reply.code(403).send({ error: 'Registrations are closed' })
     }
-    if (env.REGISTRATION_POLICY === 'invite_only') {
+    if (!existingUser && env.REGISTRATION_POLICY === 'invite_only') {
       return reply.code(403).send({ error: 'Invite required' })
     }
     if (env.REGISTRATION_POLICY === 'github_whitelist') {

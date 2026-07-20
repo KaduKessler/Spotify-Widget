@@ -9,7 +9,7 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 | --- | --- |
 | 1. Foundation | ✅ Concluído |
 | 2. Security Hardening | ✅ Concluído |
-| 3. Registration Policies | 🟡 Parcial — enforcement básico existe, falta fluxo de invite token e distinguir signup de login no bloqueio |
+| 3. Registration Policies | 🟡 Parcial — enforcement básico existe, falta fluxo de invite token de verdade |
 | 4. Spotify Per-User | 🟡 Quase completo — falta encriptar credenciais em repouso |
 | 5. Widget Features | 🟡 Quase completo — cache de busca de tracks não existe (só dedupe de 3s) |
 | 6. Frontend Refactoring | 🟡 Parcial — falta extrair hooks e tema claro/escuro do painel |
@@ -109,7 +109,7 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 ### Registration Policy: Closed
 
 - [x] `REGISTRATION_POLICY=closed` bloqueia GitHub com 403 (`auth-github.ts`)
-- [ ] **Bug**: o check roda antes do upsert e barra até usuário já existente tentando logar de novo, não só signup novo — devia distinguir os dois casos
+- [x] Só bloqueia signup novo, login de quem já tem conta passa normal
 - [ ] Admin criar contas manualmente (sem rota ainda)
 
 ---
@@ -263,8 +263,7 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 
 ## 🎯 Próximos passos sugeridos
 
-1. Corrigir o bug de bloqueio de usuário existente nas policies `closed`/`invite_only` (Fase 3)
-2. Testes automatizados: hoje é zero cobertura, maior risco real do projeto (Fase 7)
-3. GitHub Actions básico (build + lint + audit) antes de qualquer coisa mais além (Fase 8)
-4. Encriptar credenciais Spotify em repouso (Fase 4)
-5. Sistema de invite token de verdade, se a policy for pra valer (Fase 3)
+1. Testes automatizados: hoje é zero cobertura, maior risco real do projeto (Fase 7)
+2. GitHub Actions básico (build + lint + audit) antes de qualquer coisa mais além (Fase 8)
+3. Encriptar credenciais Spotify em repouso (Fase 4)
+4. Sistema de invite token de verdade, se a policy for pra valer (Fase 3)

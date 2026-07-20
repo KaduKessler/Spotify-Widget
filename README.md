@@ -1,16 +1,31 @@
-# Spotify Widget
+<p align="center">
+  <img src=".github/assets/logoheader.png" alt="spotify-widget" width="420" />
+</p>
 
-Widget SVG dinâmico mostrando sua música atual ou favorita do Spotify — para README do GitHub, site pessoal ou qualquer lugar que aceite `<img>`. Vem com um painel de administração completo (multi-usuário, RBAC, whitelist de convite) pra quem quiser hospedar pra mais de uma pessoa.
+<p align="center">
+  Widget SVG dinâmico da sua música atual (ou favorita) do Spotify. Cola no README do GitHub, no seu site ou em qualquer lugar que aceite <code>&lt;img&gt;</code>.
+</p>
 
-## ✨ Funcionalidades
+<p align="center">
+  <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-1DB954" />
+  <img alt="Node" src="https://img.shields.io/badge/node-22%2B-1DB954" />
+  <img alt="Docker" src="https://img.shields.io/badge/deploy-docker%20compose-1DB954" />
+  <img alt="Stack" src="https://img.shields.io/badge/stack-Fastify%20%2B%20React-1DB954" />
+</p>
 
-- 🎵 **Now Playing**: exibe a música que você está ouvindo em tempo real
-- 📌 **Track fixa**: fixa uma música específica pra exibir sempre
-- 🎨 **Aparência customizável**: tema (dark/light), fundo (padrão/transparente/cor sólida), cor do texto e escala — tudo via query param, sem precisar salvar
-- 🔒 **Privacidade**: toggle pra expor/ocultar o JSON público a qualquer momento
-- 👥 **Multi-usuário**: RBAC completo (admin / user / viewer)
-- 🔐 **Múltiplos providers**: senha, GitHub OAuth ou modo público — pode combinar
-- 🐳 **Deploy em 1 comando**: `docker compose up --build -d`, zero config obrigatório
+---
+
+## ✨ O que ele faz
+
+| | |
+| --- | --- |
+| 🎵 **Now Playing** | mostra a música que você está ouvindo, em tempo real |
+| 📌 **Track fixa** | ou fixa uma música específica pra exibir sempre |
+| 🎨 **Aparência sob demanda** | tema, fundo, cor do texto e escala, tudo via query param, sem precisar salvar |
+| 🔒 **Privacidade** | um toggle esconde os dados públicos a qualquer momento |
+| 👥 **Multi-usuário** | RBAC completo (admin / user / viewer), pra hospedar pra mais gente |
+| 🔐 **Login flexível** | senha, GitHub OAuth ou modo público, dá pra combinar |
+| 🐳 **Deploy zero-config** | `docker compose up --build -d` e pronto |
 
 ## 🗺️ Como as peças se encaixam
 
@@ -38,13 +53,22 @@ flowchart LR
     api -- "login" --> github
 ```
 
-O backend serve as duas coisas: a rota pública `/widget` (o SVG) e o painel `/admin` (a SPA que você usa pra configurar tudo). Cada usuário guarda suas próprias credenciais do Spotify no banco — não existe client ID/secret "global" no `.env`.
+O backend serve duas coisas: a rota pública `/widget` (o SVG) e o painel `/admin` (a SPA de configuração). Cada usuário guarda as próprias credenciais do Spotify no banco. Não existe client ID/secret "global" no `.env`.
 
 ## 🚀 Quick Start
 
-A forma mais rápida de rodar é via Docker — veja a seção "🐳 Docker Quickstart" mais abaixo, sobe com 1 comando e sem `.env`.
+**A forma mais rápida:**
 
-Pra rodar direto na máquina (sem Docker):
+```bash
+git clone https://github.com/KaduKessler/Spotify-Readme.git
+cd Spotify-Readme
+docker compose up --build -d
+```
+
+Sem `.env`, sem segredo pra gerar na mão. Na primeira execução, o container cria e imprime uma senha de admin sozinho. Detalhes na seção "🐳 Docker" mais abaixo.
+
+<details>
+<summary><strong>Ou direto na máquina, sem Docker</strong></summary>
 
 ### Requisitos
 
@@ -60,245 +84,34 @@ cd Spotify-Readme
 
 pnpm install
 
-# Configure o .env do backend
 cp backend/.env.example backend/.env
-# edite backend/.env com suas variáveis (veja abaixo)
+# edite backend/.env com suas variáveis (veja "Variáveis de Ambiente" abaixo)
 
 cd backend && pnpm exec prisma migrate dev && cd ..
 
-# Inicia backend (porta 3000) + admin (porta 5173) juntos
-pnpm dev
+pnpm dev  # backend (porta 3000) + admin (porta 5173) juntos
 ```
 
-Acesse `http://127.0.0.1:5173` pra usar o painel em dev (proxy pro backend embutido), ou `http://127.0.0.1:3000/widget` pra ver o SVG puro.
+Acesse `http://127.0.0.1:5173` pro painel em dev, ou `http://127.0.0.1:3000/widget` pra ver o SVG puro.
 
-### Configuração Básica
+> Credenciais do Spotify (Client ID/Secret) **não vão no `.env`**. Cada usuário cadastra as suas próprias na aba Configuração do painel, depois de logar.
 
-Edite `backend/.env` (é aí que o backend lê, não na raiz):
+</details>
 
-```env
-# Autenticação (escolha um ou mais)
-ENABLE_PASSWORD_AUTH=true
-ENABLE_GITHUB_AUTH=false
-ENABLE_NONE_AUTH=false
-
-# Admin inicial (para password auth)
-ADMIN_USERNAME=seu_usuario
-ADMIN_PASSWORD=senha_forte_aqui
-
-# GitHub OAuth (se ENABLE_GITHUB_AUTH=true)
-GITHUB_CLIENT_ID=seu_github_client_id
-GITHUB_CLIENT_SECRET=seu_github_client_secret
-
-# URLs (o callback do GitHub OAuth é montado a partir de APP_URL)
-APP_URL=http://127.0.0.1:3000
-ADMIN_URL=http://127.0.0.1:5173
-
-SESSION_SECRET=gere_com_openssl_rand_hex_32
-```
-
-> Credenciais do Spotify (Client ID/Secret) **não vão no `.env`** — cada usuário cadastra as suas próprias na aba Configuração do painel, depois de logar.
-
-## 🔐 Sistema de Autenticação e RBAC
-
-### Providers de Autenticação
-
-O sistema suporta **múltiplos providers simultâneos**:
-
-#### 1. Password Authentication
-
-```env
-ENABLE_PASSWORD_AUTH=true
-ADMIN_USERNAME=seu_usuario
-ADMIN_PASSWORD=sua_senha
-```
-
-- Permite múltiplas contas locais com senhas hasheadas (bcrypt)
-- Credenciais armazenadas no banco de dados
-- Admin inicial configurado via env vars (fallback)
-
-#### 2. GitHub OAuth
-
-```env
-ENABLE_GITHUB_AUTH=true
-GITHUB_CLIENT_ID=...
-GITHUB_CLIENT_SECRET=...
-```
-
-O callback (`{APP_URL}/auth/github/callback`) é montado automaticamente a partir de `APP_URL` — não existe uma variável separada pra ele. Registre essa URL no OAuth App do GitHub.
-
-- Autenticação via GitHub OAuth
-- Cria conta automaticamente no primeiro login (respeitando política de registro)
-
-#### 3. None Mode (Public)
-
-```env
-ENABLE_NONE_AUTH=true
-```
-
-- Modo totalmente público, sem autenticação
-- Útil para uso pessoal ou demos
-
-### Roles e Permissões
-
-O sistema tem 3 roles:
-
-| Role | Permissões |
-| --- | --- |
-| `admin` | Acesso total: gestão de usuários, config global |
-| `user` | Editar própria config do widget e credenciais |
-| `viewer` | Apenas visualizar (sem edição) |
-
-### Políticas de Registro
-
-Controle quem pode criar conta:
-
-```env
-REGISTRATION_POLICY=open  # ou: github_whitelist, invite_only, closed
-```
-
-#### Opções
-
-- **`open`**: Qualquer pessoa pode criar conta
-- **`github_whitelist`**: Apenas usuários GitHub na whitelist
-- **`invite_only`**: Apenas via convite de admin (futuro)
-- **`closed`**: Nenhum registro novo permitido
-
-#### GitHub Whitelist
-
-**Configuração via `.env` (estática):**
-
-Para `REGISTRATION_POLICY=github_whitelist`:
-
-```env
-GITHUB_WHITELIST=user1,user2,user3
-```
-
-Apenas esses usernames do GitHub poderão criar conta. Essa lista é importada automaticamente para o banco de dados na primeira execução.
-
-**Gerenciamento dinâmico (via Admin Panel):**
-
-Admins podem gerenciar a whitelist dinamicamente através do painel de administração:
-
-- **Adicionar usuários**: Um por um ou em lote (até 100 por vez)
-- **Validar no GitHub**: Opção para verificar se o username existe antes de adicionar
-- **Rastrear origem**: Identifica se foi adicionado manualmente ou importado do `.env`
-- **Remover usuários**: Soft-delete com auditoria (quem removeu e quando)
-- **Buscar**: Campo de pesquisa para localizar usuários rapidamente
-
-**Como funciona:**
-
-1. A whitelist do banco de dados **complementa** (não substitui) a do `.env`
-2. Usuários na whitelist `.env` são importados automaticamente na primeira execução
-3. Campo "Adicionado por" = NULL significa importação do `.env` ou sistema
-4. Remover um usuário não deleta do banco (apenas marca como removido para auditoria)
-5. É possível reativar usuários removidos adicionando novamente
-
-### Admin Users
-
-Defina admins via env:
-
-```env
-ADMIN_USERS=admin,johndoe,janedoe
-```
-
-- Usuários nesta lista sempre recebem role `admin`
-- Funciona para autenticação por senha e GitHub
-- Útil para promover admins sem acessar o banco
-- Admins podem usar o painel para gerenciar a whitelist GitHub
-
-### Permitir Cadastro por Senha
-
-```env
-ALLOW_PASSWORD_SIGNUP=true  # Permite criar contas locais
-```
-
-Se `false`, apenas o admin inicial do env pode logar (mais restritivo).
-
-## 🎛 Painel Administrativo
-
-Acesse `/admin` após autenticar-se. Três abas:
-
-### Aba "Configuração"
-
-Editor único: o preview do widget e os controles ficam lado a lado, muda algo e vê o resultado na hora.
-
-- **Modo**: Now Playing ou Track fixa
-- **Tema**: Dark ou Light
-- **Aparência**: fundo (padrão/transparente/cor), cor do texto, tamanho (50%–300%) — reflete no preview sem precisar salvar, e vira parte da URL de embed
-- **Privacidade**: toggle pra expor/ocultar o JSON público (modal "Flags")
-- **Embed**: copia pronto em Markdown, HTML ou URL direta
-- **Integração Spotify**: credenciais pessoais (Client ID/Secret) + conectar/desconectar conta + status "tocando agora" (quando modo é Track fixa, pra referência)
-
-### Aba "Usuários" (admin only)
-
-- Lista usuários, provider, role e data de criação, com busca
-- Criar usuário novo (senha + role)
-- Editar role de qualquer usuário
-- Redefinir senha de usuários locais (`provider=password`)
-
-### Aba "Whitelist GitHub" (admin only)
-
-Só aparece com `REGISTRATION_POLICY=github_whitelist`. Gerencia quem pode criar conta via GitHub OAuth:
-
-- Adicionar 1 usuário (com validação opcional contra a API do GitHub) ou em lote (colar vários, um por linha)
-- Buscar, ver quem adicionou e quando, remover (soft-delete com auditoria)
-
-## 🛠 API Endpoints
-
-### Públicos
-
-- `GET /widget?user=username` - SVG do widget (veja query params na seção "🎨 Uso do Widget")
-- `GET /user/api/:username` - JSON com a track atual (respeita a flag de privacidade)
-- `GET /health` - healthcheck
-- `GET /ready` - readiness check
-
-### Autenticação
-
-- `POST /auth/login` - Login com username/password
-- `POST /auth/logout` - Logout
-- `GET /auth/github` - Inicia OAuth GitHub
-- `GET /auth/github/callback` - Callback GitHub OAuth
-- `GET /auth/spotify` - Inicia OAuth Spotify (Now Playing)
-- `GET /auth/spotify/callback` - Callback Spotify OAuth
-- `POST /auth/spotify/disconnect` - Desconecta conta Spotify
-- `GET /api/auth-config` - Providers e política de registro
-
-### Autenticados
-
-- `GET /api/me` - Info do usuário logado (inclui role)
-- `GET /api/config` - Config do widget do usuário
-- `POST /api/config` - Atualiza config do widget
-- `GET /api/spotify-config` - Credenciais Spotify do usuário
-- `POST /api/spotify-config` - Atualiza credenciais Spotify
-- `DELETE /api/spotify-config` - Remove credenciais Spotify
-- `GET /api/spotify/status` - Status da conexão Spotify
-- `GET /api/spotify/now-playing` - Track atual (requer OAuth)
-
-### Admin Only
-
-- `GET /api/admin/users` - Lista todos os usuários
-- `POST /api/admin/users` - Cria novo usuário (password)
-- `PUT /api/admin/users/:username/role` - Atualiza role
-- `PUT /api/admin/users/:username/password` - Redefine senha
-
-## 🎨 Uso do Widget
-
-### Markdown (GitHub README)
+## 🎨 Como usar o widget
 
 ```markdown
 ![Spotify](https://seu-dominio.com/widget?user=seu_username)
 ```
 
-### HTML
-
 ```html
 <img src="https://seu-dominio.com/widget?user=seu_username" alt="Spotify Widget" />
 ```
 
-O jeito mais fácil de montar essa URL é copiar direto do painel (aba Configuração → Embed) — ele já monta com a aparência que você escolheu.
+O jeito mais fácil de montar essa URL é copiar direto do painel (aba Configuração → Embed): ele já monta com a aparência que você escolheu.
 
-### Query params disponíveis
+<details>
+<summary><strong>Query params disponíveis</strong></summary>
 
 | Param | Valores | Efeito |
 | --- | --- | --- |
@@ -319,79 +132,124 @@ O jeito mais fácil de montar essa URL é copiar direto do painel (aba Configura
 ![Spotify](https://seu-dominio.com/widget?user=seu_username&bg=transparent&color=ffffff&scale=1.5)
 ```
 
+</details>
+
+## 🎛 Painel administrativo
+
+Três abas, depois de logar em `/admin`:
+
+- **Configuração**: editor único, preview e controles lado a lado. Modo (Now Playing/Track fixa), tema, aparência (fundo/cor/tamanho), toggle de privacidade, embed pronto pra copiar, credenciais do Spotify.
+- **Usuários** (admin): lista, cria, edita role e reseta senha de qualquer usuário.
+- **Whitelist GitHub** (admin, só com `REGISTRATION_POLICY=github_whitelist`): controla quem pode criar conta via GitHub OAuth, um por um ou em lote.
+
+<details>
+<summary><strong>Sistema de autenticação e RBAC (detalhes)</strong></summary>
+
+### Providers (dá pra combinar mais de um)
+
+**Password**
+
+```env
+ENABLE_PASSWORD_AUTH=true
+ADMIN_USERNAME=seu_usuario
+ADMIN_PASSWORD=sua_senha
+```
+
+Contas locais com senha hasheada (bcrypt), armazenadas no banco. O admin inicial vem do env como fallback.
+
+**GitHub OAuth**
+
+```env
+ENABLE_GITHUB_AUTH=true
+GITHUB_CLIENT_ID=...
+GITHUB_CLIENT_SECRET=...
+```
+
+Cria conta automaticamente no primeiro login, respeitando a política de registro. O callback (`{APP_URL}/auth/github/callback`) é montado a partir de `APP_URL`, não existe variável separada pra ele.
+
+**None (público)**
+
+```env
+ENABLE_NONE_AUTH=true
+```
+
+Sem autenticação nenhuma. Útil pra uso pessoal ou demo.
+
+### Roles
+
+| Role | Permissões |
+| --- | --- |
+| `admin` | acesso total: gestão de usuários, config global |
+| `user` | edita a própria config do widget e credenciais |
+| `viewer` | só visualiza |
+
+### Políticas de registro
+
+```env
+REGISTRATION_POLICY=open  # open | github_whitelist | invite_only | closed
+```
+
+- `open`: qualquer pessoa cria conta
+- `github_whitelist`: só usuários GitHub na whitelist
+- `invite_only`: só via convite de admin (futuro)
+- `closed`: nenhum registro novo
+
+### Whitelist GitHub
+
+```env
+GITHUB_WHITELIST=user1,user2,user3
+```
+
+Essa lista do `.env` é importada pro banco automaticamente na primeira execução, e **complementa** (não substitui) a whitelist gerenciada pelo painel. Lá dá pra adicionar em lote, validar contra a API do GitHub, rastrear quem adicionou e remover com auditoria (soft-delete, dá pra reativar depois).
+
+### Outras flags
+
+```env
+ADMIN_USERS=admin,johndoe,janedoe   # sempre recebem role admin
+ALLOW_PASSWORD_SIGNUP=true          # false = só o admin inicial do env loga
+```
+
+</details>
+
+<details>
+<summary><strong>API Endpoints (detalhes)</strong></summary>
+
+**Públicos**
+
+- `GET /widget?user=username` - SVG do widget
+- `GET /user/api/:username` - JSON com a track atual (respeita a flag de privacidade)
+- `GET /health`, `GET /ready` - health/readiness check
+
+**Autenticação**
+
+- `POST /auth/login`, `POST /auth/logout`
+- `GET /auth/github`, `GET /auth/github/callback`
+- `GET /auth/spotify`, `GET /auth/spotify/callback`, `POST /auth/spotify/disconnect`
+- `GET /api/auth-config` - providers e política de registro ativos
+
+**Autenticados**
+
+- `GET /api/me` - usuário logado (com role)
+- `GET /api/config`, `POST /api/config` - config do widget
+- `GET /api/spotify-config`, `POST /api/spotify-config`, `DELETE /api/spotify-config`
+- `GET /api/spotify/status`, `GET /api/spotify/now-playing`
+
+**Admin only**
+
+- `GET /api/admin/users`, `POST /api/admin/users`
+- `PUT /api/admin/users/:username/role`, `PUT /api/admin/users/:username/password`
+
+</details>
+
 ## 🔒 Privacidade
 
-O toggle **"Expor dados no JSON público"** na aba Flags controla:
+O toggle **"Expor dados no JSON público"** (modal Flags) controla o endpoint `/user/api/:username`: ligado, retorna os dados da track; desligado, responde `204 No Content` e esconde tudo. Bom pra pausar a exibição sem desconfigurar o widget.
 
-- **Ligado**: Endpoint `/user/api/:username` retorna dados da track
-- **Desligado**: Endpoint retorna `204 No Content` (oculta tudo)
-
-Útil quando você quer pausar a exibição sem desconfigurar o widget.
-
-## 📦 Estrutura do Projeto
-
-```text
-Spotify-Readme/
-├── Dockerfile             # Build multi-stage (admin + backend num container)
-├── docker-compose.yml     # Deploy em 1 comando
-├── docker-entrypoint.sh   # Migrations + geração de secrets na 1ª execução
-├── backend/               # Servidor Fastify + Prisma
-│   ├── .env               # Variáveis de ambiente (lido daqui, não da raiz)
-│   ├── .env.example       # Template de variáveis
-│   ├── src/
-│   │   ├── routes/        # Endpoints
-│   │   ├── lib/           # DB, config, auth helpers
-│   │   └── plugins/       # Auth plugin
-│   ├── prisma/            # Schema e migrations
-│   └── data/               # SQLite (gitignored)
-├── admin/                 # Frontend React + Vite
-│   ├── .env.local          # Variáveis frontend (VITE_*)
-│   └── src/
-│       ├── components/     # WidgetEditorCard, UsersPanel, etc
-│       └── App.tsx         # Orquestra estado + composição das telas
-└── TODO.md                 # Roadmap
-```
-
-## 🧪 Desenvolvimento
-
-```bash
-# Backend + admin juntos, a partir da raiz
-pnpm dev
-```
-
-Ou separado:
-
-### Backend
-
-```bash
-cd backend
-
-pnpm dev              # hot reload (tsx watch), porta 3000
-pnpm build             # compila pra dist/
-pnpm exec prisma studio  # GUI do banco
-```
-
-### Frontend
-
-```bash
-cd admin
-
-pnpm dev     # dev server com proxy pro backend, porta 5173
-pnpm build   # build de produção
-```
-
-## 🐳 Docker Quickstart
-
-Se encontrar erros de build nativo (`better-sqlite3`) ou preferir isolar tudo em um container, use Docker. Não precisa criar `.env` nem gerar segredo antes — sobe direto:
+## 🐳 Docker
 
 ```bash
 docker compose up --build -d
-```
-
-Na primeira execução, se `SESSION_SECRET` e `ADMIN_PASSWORD` não forem definidos, o container gera valores aleatórios sozinho, persiste em `./data` (pra sobreviver a restarts) e imprime o usuário/senha de admin gerados no log:
-
-```bash
-docker compose logs -f app
+docker compose logs -f app   # ver a senha gerada na 1ª execução
 ```
 
 ```text
@@ -405,11 +263,12 @@ docker compose logs -f app
 ================================================================
 ```
 
-Acesse `http://localhost:3000/admin/` e entre com essas credenciais.
+Acesse `http://localhost:3000/admin/` com essas credenciais.
 
-### Customizar
+<details>
+<summary><strong>Fixar suas próprias credenciais</strong></summary>
 
-Para fixar suas próprias credenciais em vez das geradas, crie um `.env` na raiz (mesma pasta do `docker-compose.yml`) — o Compose lê automaticamente:
+Crie um `.env` na raiz (mesma pasta do `docker-compose.yml`), o Compose lê automaticamente:
 
 ```env
 SESSION_SECRET=gere_com_openssl_rand_hex_32
@@ -420,25 +279,71 @@ APP_URL=http://localhost:3000
 ADMIN_URL=http://localhost:3000/admin
 ```
 
-> `ADMIN_USERNAME=admin` sozinho é rejeitado de propósito (checagem de segurança) — use qualquer outro valor.
+> `ADMIN_USERNAME=admin` sozinho é rejeitado de propósito (checagem de segurança). Use qualquer outro valor.
 
-### Comandos úteis
+**Comandos úteis**
 
 ```bash
-docker compose down          # parar
-docker compose down -v       # parar e remover volumes (apaga o banco!)
+docker compose down              # parar
+docker compose down -v           # parar e apagar volumes (inclui o banco!)
 docker compose build --no-cache  # forçar rebuild ignorando cache
 ```
 
-### Notas
+**Notas**: o compose mapeia `./data:/app/data` pra persistir o banco e os segredos gerados. Healthcheck em `/health` a cada 30s.
 
-- O compose mapeia `./data:/app/data` pra persistir o banco SQLite, o `SESSION_SECRET` e o `ADMIN_PASSWORD` gerados.
-- O healthcheck verifica `/health` a cada 30s.
-- Variáveis com `:-` no compose têm valor padrão (não precisam estar no `.env`).
+</details>
 
-## 📝 Variáveis de Ambiente Completas
+## 📦 Estrutura do projeto
 
-Tudo lido de `backend/.env` (ou injetado direto como env var, no caso do Docker). Não existe `PORT`/`HOST` configurável — o servidor sempre sobe em `0.0.0.0:3000` — nem credencial global de Spotify: cada usuário guarda a sua própria no painel, não no `.env`.
+```text
+Spotify-Readme/
+├── Dockerfile             # Build multi-stage (admin + backend num container)
+├── docker-compose.yml     # Deploy em 1 comando
+├── docker-entrypoint.sh   # Migrations + geração de secrets na 1ª execução
+├── backend/               # Servidor Fastify + Prisma
+│   ├── .env               # Variáveis de ambiente (lido daqui, não da raiz)
+│   ├── src/
+│   │   ├── routes/        # Endpoints
+│   │   ├── lib/           # DB, config, auth helpers
+│   │   └── plugins/       # Auth plugin
+│   └── prisma/            # Schema e migrations
+├── admin/                 # Frontend React + Vite
+│   └── src/
+│       ├── components/    # WidgetEditorCard, UsersPanel, etc
+│       └── App.tsx        # Orquestra estado + composição das telas
+└── TODO.md
+```
+
+## 🧪 Desenvolvimento
+
+```bash
+pnpm dev   # backend + admin juntos, a partir da raiz
+```
+
+<details>
+<summary><strong>Comandos separados</strong></summary>
+
+```bash
+cd backend
+pnpm dev                  # hot reload (tsx watch), porta 3000
+pnpm build                # compila pra dist/
+pnpm exec prisma studio   # GUI do banco
+```
+
+```bash
+cd admin
+pnpm dev     # dev server com proxy pro backend, porta 5173
+pnpm build   # build de produção
+```
+
+</details>
+
+## 📝 Variáveis de ambiente
+
+Lidas de `backend/.env` (ou injetadas direto como env var, no caso do Docker). Não existe `PORT`/`HOST` configurável, o servidor sempre sobe em `0.0.0.0:3000`, nem credencial global de Spotify: cada usuário guarda a sua própria no painel.
+
+<details>
+<summary><strong>Lista completa</strong></summary>
 
 ```env
 # === Auth Providers (habilite 1 ou mais) ===
@@ -479,15 +384,12 @@ HELMET_DISABLE_HSTS=true
 DATABASE_URL=file:./data/db.sqlite
 ```
 
-## 🤝 Contribuindo
+</details>
 
-Contribuições são bem-vindas! Abra issues ou PRs.
+---
 
-## 📄 Licença
-
-MIT License - veja [LICENSE](LICENSE) para detalhes.
-
-## 🙏 Créditos
-
-- Inspirado em diversos projetos de widgets Spotify para GitHub
-- Construído com Fastify, Prisma, React e Vite
+<p align="center">
+  <a href="LICENSE">GPL-3.0 License</a><br />
+  Contribuições são bem-vindas, abra uma issue ou PR.<br />
+  Construído com Fastify, Prisma, React e Vite.
+</p>

@@ -11,7 +11,7 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 | 2. Security Hardening | ✅ Concluído |
 | 3. Registration Policies | 🟡 Parcial — enforcement básico existe, falta fluxo de invite token de verdade |
 | 4. Spotify Per-User | ✅ Concluído — credenciais e tokens criptografados em repouso |
-| 5. Widget Features | 🟡 Quase completo — cache de busca de tracks não existe (só dedupe de 3s) |
+| 5. Widget Features | ✅ Concluído |
 | 6. Frontend Refactoring | 🟡 Parcial — falta extrair hooks e tema claro/escuro do painel |
 | 7. Testing & Quality | ✅ Concluído — Vitest + husky, cobre auth/config/rate limit/multi-user |
 | 8. CI/CD & Deploy | ✅ Concluído — CI completo + imagem publicada no GHCR + versionamento por tag |
@@ -149,7 +149,7 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 
 - [x] `GET /api/spotify/now-playing` (poll sob demanda, sem webhook)
 - [x] Fallback pra última faixa tocada quando nada tá tocando agora
-- [ ] Cache de tracks consultadas (existe um cache de 3s no now-playing só pra dedupe de chamada simultânea, não é cache de busca)
+- [x] Cache de tracks consultadas (modo Track fixa): 1h por trackId, evita bater na API do Spotify a cada refresh do `/widget` público pra uma faixa que não muda. Separado do cache de 3s do now-playing (dedupe, não cache de dado estático)
 - [x] Modo `NOW_PLAYING`: reflete a faixa atual a cada fetch do `/widget`
 
 ### SVG Widget

@@ -139,11 +139,7 @@ function extractTrackId(input: string): string | null {
   return null
 }
 
-export async function getTrackDetailsForUser(
-  userId: number,
-  trackId: string,
-  app: FastifyInstance,
-): Promise<{
+type TrackDetails = {
   id: string
   name: string
   artists: string[]
@@ -151,12 +147,33 @@ export async function getTrackDetailsForUser(
   albumArt: string | null
   uri: string
   url: string
-} | null> {
-  const accessToken = await getValidAccessToken(userId, app)
-  if (!accessToken) return null
+}
 
+// Cache de faixas consultadas (modo Track fixa): o /widget é público e pode
+// ser batido a cada refresh de README/página, mas uma faixa fixa não muda
+// sozinha. Chave por trackId (não por usuário): o catálogo do Spotify é o
+// mesmo dado pra qualquer um que consulte a mesma faixa.
+const TRACK_DETAILS_CACHE_TTL_MS = 60 * 60 * 1000
+const trackDetailsCache = new Map<
+  string,
+  { data: TrackDetails; expiresAt: number }
+>()
+
+export async function getTrackDetailsForUser(
+  userId: number,
+  trackId: string,
+  app: FastifyInstance,
+): Promise<TrackDetails | null> {
   const id = extractTrackId(trackId)
   if (!id) return null
+
+  const cached = trackDetailsCache.get(id)
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data
+  }
+
+  const accessToken = await getValidAccessToken(userId, app)
+  if (!accessToken) return null
 
   try {
     const response = await fetch(`https://api.spotify.com/v1/tracks/${id}`, {
@@ -165,7 +182,7 @@ export async function getTrackDetailsForUser(
     if (!response.ok) return null
 
     const track = (await response.json()) as SpotifyTrack
-    return {
+    const details: TrackDetails = {
       id: track.id,
       name: track.name,
       artists: track.artists.map((a) => a.name),
@@ -174,6 +191,11 @@ export async function getTrackDetailsForUser(
       uri: track.uri,
       url: track.external_urls.spotify,
     }
+    trackDetailsCache.set(id, {
+      data: details,
+      expiresAt: Date.now() + TRACK_DETAILS_CACHE_TTL_MS,
+    })
+    return details
   } catch (err) {
     app.log.error({ err, trackId }, 'Failed to fetch track details')
     return null

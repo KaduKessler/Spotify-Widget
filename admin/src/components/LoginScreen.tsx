@@ -21,7 +21,7 @@ function LoginShell({
         <div className="w-full max-w-md space-y-6">
           <div className="flex justify-center">
             <img
-              src="/favicon.svg"
+              src={`${import.meta.env.BASE_URL}favicon.svg`}
               alt=""
               className="h-14 w-14 rounded-2xl shadow-lg"
             />

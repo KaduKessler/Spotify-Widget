@@ -103,19 +103,16 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 
 ### Schema & Storage
 
-- [ ] Adicionar `spotifyClientId`, `spotifyClientSecret` à tabela `User` (ou modelo `SpotifyConfig`)
-- [ ] Opcionalmente: `spotifyRefreshToken`, `spotifyAccessToken`, `spotifyTokenExpiresAt`
-- [ ] **Criptografia**:
-  - Decidir se encrypt secrets (usar `crypto` builtin ou `@noble/ciphers`)
-  - Ou apenas armazenar mascarado (mostrar últimos 4 chars no UI)
+- [x] `spotifyClientId`, `spotifyClientSecret` na tabela `User`
+- [x] `spotifyRefreshToken`, `spotifyAccessToken`, `spotifyTokenExpiresAt` (tokens OAuth do usuário)
+- [ ] **Criptografia**: hoje armazenado em texto puro, secret mascarado só na exibição (UI). Encriptar em repouso continua pendente
 
 ### Admin UI
 
-- [ ] Nova seção: "Spotify Settings"
-- [ ] Form: input clientId, input clientSecret (password field)
-- [ ] Botão: "Save Credentials"
-- [ ] Botão: "Clear Credentials" (se já configurado)
-- [ ] Status: "Configured ✓" ou "Not configured"
+- [x] Seção "Integração Spotify" (aba Configuração do painel)
+- [x] Form: input clientId, input clientSecret (password field)
+- [x] Botão "Salvar"/"Atualizar" + "Limpar" (se já configurado)
+- [x] Status "Configurado" com badge
 
 ### Backend Routes
 
@@ -123,11 +120,11 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 - [x] `POST /api/spotify-config` (valida e salva clientId/Secret)
 - [x] `DELETE /api/spotify-config` (limpa credenciais do user)
 
-### Widget com Spotify (Future)
+### Widget com Spotify
 
-- [ ] Usar clientId/Secret do user para fazer requisições à API Spotify
-- [ ] Não usar credenciais globais/hardcoded
-- [ ] Implementar search de tracks, fetch de now playing, etc
+- [x] Usa clientId/Secret do próprio usuário pra falar com a API do Spotify
+- [x] Sem credenciais globais/hardcoded no `.env`
+- [x] Now playing (com fallback pra última tocada) e busca de faixa por ID/URL pro modo Track fixa
 
 ---
 
@@ -135,20 +132,18 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 
 ### Spotify Integration
 
-- [ ] Endpoint `POST /api/spotify-now-playing` (webhook/polling)
-  - Recebe update de reprodução, salva em `widget_config.currentTrack`
-- [ ] Endpoint `POST /api/spotify-search` (busca faixas por query)
-  - Usa clientId/Secret do user autenticado
-- [ ] Cache de tracks consultadas (opcional, depois)
-- [ ] Modo `NOW_PLAYING`: atualiza em tempo real (polling ou webhook)
+- [x] `GET /api/spotify/now-playing` (poll sob demanda, sem webhook)
+- [x] Fallback pra última faixa tocada quando nada tá tocando agora
+- [ ] Cache de tracks consultadas (existe um cache de 3s no now-playing só pra dedupe de chamada simultânea, não é cache de busca)
+- [x] Modo `NOW_PLAYING`: reflete a faixa atual a cada fetch do `/widget`
 
 ### SVG Widget
 
-- [ ] Gerar SVG dinâmico baseado em `widget_config` (mode, theme, currentTrack)
-- [ ] Suporte a modo `FIXED_TRACK` (mostra track fixa)
-- [ ] Suporte a modo `NOW_PLAYING` (mostra track atual + info Spotify)
-- [ ] Styles: dark/light theme
-- [ ] Endpoint: `GET /widget/:username.svg` (retorna SVG renderizado)
+- [x] Gera SVG dinâmico baseado na config salva (mode, theme, aparência)
+- [x] Modo `FIXED_TRACK` (track fixa escolhida no painel)
+- [x] Modo `NOW_PLAYING` (faixa atual, com equalizer animado)
+- [x] Tema dark/light + aparência customizável (fundo, cor do texto, escala) via query param
+- [x] Endpoint real: `GET /widget?user=username` (não `/widget/:username.svg` como planejado aqui)
 
 ---
 
@@ -156,25 +151,19 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 
 ### Code Organization
 
-- [ ] Componentizar `App.tsx`:
-  - `Header.tsx` (logo, user menu, logout)
-  - `AuthForm.tsx` (login/signup com múltiplos providers)
-  - `Dashboard.tsx` (tabs: widget editor, spotify config, preview)
-  - `WidgetEditor.tsx` (form: mode, theme, trackId)
-  - `SpotifyConfig.tsx` (form: clientId, clientSecret)
-  - `Preview.tsx` (mostra widget em tempo real)
-- [ ] Separar serviços/hooks:
-  - `useSession()` → manage user/username
-  - `useAuth()` → login/logout/signup
-  - `useConfig()` → fetch/update widget config
-  - `useSpotify()` → fetch/update Spotify credentials
+- [x] `App.tsx` componentizado (nomes reais diferem do planejado aqui, mas a ideia foi feita):
+  `DashboardHeader`, `LoginScreen`, `TabNav`, `WidgetEditorCard` (editor + preview juntos),
+  `SpotifyPanel`, `NowPlayingCard`, `UsersPanel`, `GitHubWhitelistPanel`,
+  `Button`/`ModalShell`/`Toggle`/`Segmented`/`DataTable` (compartilhados)
+- [ ] Separar em hooks (`useSession`, `useAuth`, `useConfig`, `useSpotify`): estado ainda vive
+  centralizado em `App.tsx` e é passado via props, funciona mas não foi extraído em hooks
 
 ### Styling & UX
 
-- [ ] Aplicar design melhorado (tema, espaçamento, tipografia)
-- [ ] Suporte tema claro/escuro (persistir em localStorage)
-- [ ] Responsividade mobile
-- [ ] Feedback visual: loading states, error messages, success toasts
+- [x] Design consistente (glass cards, paleta única, motion, foco/contraste WCAG AA)
+- [ ] Tema claro/escuro do próprio painel (o widget gerado tem dark/light, o painel em si é só dark)
+- [x] Responsividade mobile (header, tabs, cards testados e ajustados)
+- [x] Feedback visual: loading states (skeleton, min-duration), mensagens de erro/sucesso inline
 
 ---
 
@@ -184,6 +173,11 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 - Fluxo de whitelist GitHub completo no backend (modelo, rotas admin, import do .env, reativação suave)
 - Postman collections e ambientes (auth, admin, public API) + README de uso
 - Variáveis do admin parametrizadas via `.env` (`VITE_DEV_PORT`, `VITE_BACKEND_URL`) e `vite.config.ts` lendo-as com `loadEnv`
+- Aparência customizável do widget via query param (fundo, cor do texto, escala) além de tema/spin/rainbow/scan
+- `pnpm audit`: 0 vulnerabilidades (era 51)
+- `biome ci` limpo em todo o projeto
+- Redesign completo do painel: editor unificado (config + preview), header com menu de usuário, tabelas e modais padronizados, contraste WCAG AA
+- Deploy real via Docker: `Dockerfile` + `docker-compose.yml` + entrypoint que gera segredos sozinho na 1ª execução, testado ponta a ponta
 
 ---
 

@@ -317,8 +317,12 @@ Spotify-Widget/
 ## 🧪 Desenvolvimento
 
 ```bash
-pnpm dev   # backend + admin juntos, a partir da raiz
+pnpm dev         # backend + admin juntos, a partir da raiz
+pnpm test        # suite do backend (Vitest, banco de teste isolado)
+pnpm typecheck   # tsc --noEmit nos dois pacotes
 ```
+
+Pre-commit hook (husky) roda `biome check` + `typecheck` automaticamente antes de cada commit.
 
 <details>
 <summary><strong>Comandos separados</strong></summary>
@@ -327,6 +331,7 @@ pnpm dev   # backend + admin juntos, a partir da raiz
 cd backend
 pnpm dev                  # hot reload (tsx watch), porta 3000
 pnpm build                # compila pra dist/
+pnpm test                 # Vitest
 pnpm exec prisma studio   # GUI do banco
 ```
 

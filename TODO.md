@@ -13,7 +13,7 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 | 4. Spotify Per-User | 🟡 Quase completo — falta encriptar credenciais em repouso |
 | 5. Widget Features | 🟡 Quase completo — cache de busca de tracks não existe (só dedupe de 3s) |
 | 6. Frontend Refactoring | 🟡 Parcial — falta extrair hooks e tema claro/escuro do painel |
-| 7. Testing & Quality | 🔴 Pendente — zero testes, zero lint config, zero pre-commit |
+| 7. Testing & Quality | ✅ Concluído — Vitest + husky, cobre auth/config/rate limit/multi-user |
 | 8. CI/CD & Deploy | 🟡 Parcial — docs prontas, GitHub Actions não existe |
 
 ---
@@ -184,23 +184,33 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 
 ## 🧪 Fase 7: Testing & Quality
 
+Vitest no backend, rodando via `app.inject()` contra um SQLite de teste isolado
+(`backend/data/test.sqlite`, migrado e limpo automaticamente). `pnpm test` na
+raiz ou `pnpm --filter ./backend test`. Só backend por agora — sem testes de
+frontend ainda.
+
 ### Unit Tests
 
-- [ ] Routes de auth (login, logout, signup, callback)
-- [ ] Config endpoints (GET/POST/PUT)
-- [ ] Validação de CSRF state
-- [ ] Rate limit behavior
+- [x] Routes de auth: login (sucesso, senha errada, lockout após 5 falhas), logout
+- [x] Config endpoints (GET/POST `/api/config`, com e sem sessão, payload inválido)
+- [x] Validação de CSRF state no callback do GitHub (ausente, inválido, válido)
+- [x] Rate limit behavior (`/auth/login` retorna 429 após o limite)
+- [x] Políticas de registro: `closed`/`invite_only` bloqueiam signup mas não login existente, `github_whitelist` bloqueia quem não tá na lista
 
 ### Integration Tests
 
-- [ ] Fluxo completo: signup → login → config save → preview
-- [ ] Múltiplos users: isolamento de dados
+- [x] Fluxo completo: cria user (admin) → login → `POST /api/config` → `GET /widget` reflete a config salva
+- [x] Múltiplos users: isolamento de dados confirmado via `/api/config`
 
 ### Code Quality
 
-- [ ] ESLint + Prettier configurados
-- [ ] Type checking strict (tsc --noEmit)
-- [ ] Pre-commit hooks (husky)
+- [x] ~~ESLint + Prettier configurados~~ — obsoleto, projeto já usa Biome pra lint+format
+- [x] Type checking strict: `pnpm typecheck` na raiz (`tsc --noEmit` nos dois pacotes, `strict: true` já ligado)
+- [x] Pre-commit hooks (husky): `biome check` + `typecheck` em `.husky/pre-commit`
+
+**Bugs achados escrevendo os testes** (corrigidos, não só documentados):
+- Lockout de login nunca disparava de verdade: `checkThrottle` apagava o contador de tentativas a cada chamada, não só quando o lock expirava (`auth-password.ts`)
+- Rate limit devolvia 500 em vez de 429: `errorResponseBuilder` dos dois limiters não incluía `statusCode`, caía no fallback genérico do error handler (`index.ts`)
 
 ---
 
@@ -263,7 +273,6 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 
 ## 🎯 Próximos passos sugeridos
 
-1. Testes automatizados: hoje é zero cobertura, maior risco real do projeto (Fase 7)
-2. GitHub Actions básico (build + lint + audit) antes de qualquer coisa mais além (Fase 8)
-3. Encriptar credenciais Spotify em repouso (Fase 4)
-4. Sistema de invite token de verdade, se a policy for pra valer (Fase 3)
+1. GitHub Actions básico (build + lint + typecheck + test) agora que a suite existe (Fase 8)
+2. Encriptar credenciais Spotify em repouso (Fase 4)
+3. Sistema de invite token de verdade, se a policy for pra valer (Fase 3)

@@ -27,8 +27,11 @@ function checkThrottle(
     }
   }
 
-  // Lock expirou, reseta
-  failedAttempts.delete(key)
+  // Só reseta se já esteve trancado e o lock expirou. Antes de bater o
+  // limite (lockUntil ainda em 0), não mexe no contador de tentativas.
+  if (record.lockUntil > 0) {
+    failedAttempts.delete(key)
+  }
   return { allowed: true }
 }
 

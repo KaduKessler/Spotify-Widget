@@ -1,10 +1,11 @@
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import cookie from '@fastify/cookie'
 import cors from '@fastify/cors'
 import helmet from '@fastify/helmet'
 import rateLimit from '@fastify/rate-limit'
 import fastifyStatic from '@fastify/static'
-import Fastify from 'fastify'
+import Fastify, { type FastifyInstance } from 'fastify'
 import { loadConfig } from './lib/config.js'
 import { importGitHubWhitelistFromEnv } from './lib/db.js'
 import { registerAuthPlugin } from './plugins/auth.js'
@@ -22,9 +23,9 @@ import { registerSpotifyNowPlayingRoutes } from './routes/spotify-now-playing.js
 import spotifyStatusRoute from './routes/spotify-status.js'
 import { registerWidgetRoute } from './routes/widget.js'
 
-const env = loadConfig()
+export async function buildApp(): Promise<FastifyInstance> {
+  const env = loadConfig()
 
-async function bootstrap() {
   const app = Fastify({
     logger:
       env.NODE_ENV === 'development'
@@ -39,9 +40,11 @@ async function bootstrap() {
               },
             },
           }
-        : {
-            level: 'info',
-          },
+        : env.NODE_ENV === 'test'
+          ? false
+          : {
+              level: 'info',
+            },
   })
 
   // Error handler global
@@ -131,6 +134,7 @@ async function bootstrap() {
     max: 100, // 100 requests
     timeWindow: '1 minute', // por minuto
     errorResponseBuilder: () => ({
+      statusCode: 429,
       error: 'Too many requests',
       message: 'Rate limit exceeded. Please try again later.',
     }),
@@ -143,6 +147,7 @@ async function bootstrap() {
         max: 10, // 10 requests
         timeWindow: '5 minutes', // por 5 minutos
         errorResponseBuilder: () => ({
+          statusCode: 429,
           error: 'Too many auth attempts',
           message: 'Rate limit exceeded. Please try again later.',
         }),
@@ -188,6 +193,12 @@ async function bootstrap() {
     prefix: '/admin/',
   })
 
+  return app
+}
+
+async function bootstrap() {
+  const app = await buildApp()
+
   await app.listen({ port: 3000, host: '0.0.0.0' })
   app.log.info('Backend rodando em http://localhost:3000')
 
@@ -208,7 +219,11 @@ async function bootstrap() {
   }
 }
 
-bootstrap().catch((err) => {
-  console.error('Failed to start server:', err)
-  process.exit(1)
-})
+const isEntrypoint =
+  process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href
+if (isEntrypoint) {
+  bootstrap().catch((err) => {
+    console.error('Failed to start server:', err)
+    process.exit(1)
+  })
+}

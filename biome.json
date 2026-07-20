@@ -43,6 +43,8 @@
   "files": {
     "includes": [
       "backend/src/**/*.ts",
+      "backend/test/**/*.ts",
+      "backend/*.ts",
       "admin/src/**/*.tsx",
       "admin/src/**/*.ts",
       "!backend/src/generated"

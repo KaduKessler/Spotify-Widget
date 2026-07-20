@@ -142,11 +142,7 @@ export function useWidgetConfig(me: Me | null, refreshNowPlaying: () => void) {
     }
   }, [widgetUrl])
 
-  const backendBase =
-    (import.meta.env.VITE_BACKEND_URL as string) || 'http://127.0.0.1:3000'
-  const jsonUrl = me
-    ? `${backendBase}/user/api/${encodeURIComponent(me.id)}`
-    : `${backendBase}/user/api/`
+  const jsonUrl = me ? `/user/api/${encodeURIComponent(me.id)}` : `/user/api/`
 
   function copyToClipboard(format: 'markdown' | 'html' | 'url') {
     const text =

@@ -1,7 +1,10 @@
 import type { FastifyInstance } from 'fastify'
+import { loadConfig } from '../lib/config.js'
 import { getUserByUsername, prisma } from '../lib/db.js'
 
 export async function registerSpotifyAuthRoutes(app: FastifyInstance) {
+  const env = loadConfig()
+
   // Inicia o fluxo OAuth do Spotify
   app.get('/auth/spotify', async (request, reply) => {
     // Verifica sessão manualmente (pois /auth/* é público no auth plugin)
@@ -49,7 +52,7 @@ export async function registerSpotifyAuthRoutes(app: FastifyInstance) {
 
     // Scopes necessários para buscar now playing
     const scopes = ['user-read-currently-playing', 'user-read-recently-played']
-    const redirectUri = `${process.env.APP_URL || 'http://127.0.0.1:3000'}/auth/spotify/callback`
+    const redirectUri = `${env.APP_URL.replace(/\/$/, '')}/auth/spotify/callback`
 
     const authUrl = new URL('https://accounts.spotify.com/authorize')
     authUrl.searchParams.set('client_id', user.spotifyClientId)
@@ -98,7 +101,7 @@ export async function registerSpotifyAuthRoutes(app: FastifyInstance) {
     }
 
     // Troca code por access token
-    const redirectUri = `${process.env.APP_URL || 'http://127.0.0.1:3000'}/auth/spotify/callback`
+    const redirectUri = `${env.APP_URL.replace(/\/$/, '')}/auth/spotify/callback`
     const tokenUrl = 'https://accounts.spotify.com/api/token'
 
     const basicAuth = Buffer.from(
@@ -148,11 +151,11 @@ export async function registerSpotifyAuthRoutes(app: FastifyInstance) {
       app.log.info({ username }, 'Spotify OAuth successful')
 
       // Redireciona de volta para o admin (frontend)
-      const frontendUrl = process.env.FRONTEND_URL || 'http://127.0.0.1:5173'
+      const frontendUrl = env.ADMIN_URL.replace(/\/$/, '')
       return reply.redirect(`${frontendUrl}?spotify_success=true`)
     } catch (err) {
       app.log.error({ err }, 'Error during Spotify OAuth')
-      const frontendUrl = process.env.FRONTEND_URL || 'http://127.0.0.1:5173'
+      const frontendUrl = env.ADMIN_URL.replace(/\/$/, '')
       return reply.redirect(`${frontendUrl}?spotify_error=unknown`)
     }
   })

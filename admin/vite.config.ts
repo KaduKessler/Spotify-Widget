@@ -16,6 +16,7 @@ export default defineConfig(({ mode }) => {
         "/widget": backend,
         "/auth": backend,
         "/oauth": backend,
+        "/user": backend,
       },
     },
   }

@@ -12,6 +12,10 @@ RUN corepack enable && corepack prepare pnpm@10.26.2 --activate
 
 WORKDIR /app
 
+# prisma.config.ts exige a var setada só pra existir (não conecta em nada
+# nesse estágio, é só pra gerar o client e compilar).
+ENV DATABASE_URL=file:./data/db.sqlite
+
 # Copia só os manifests primeiro pra aproveitar cache de layer do pnpm install
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY backend/package.json backend/package.json

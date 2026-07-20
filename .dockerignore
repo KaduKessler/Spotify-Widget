@@ -3,9 +3,9 @@
 backend/data
 backend/src/generated
 admin/dist
-.env
-.env.*
-!.env.example
+**/.env
+**/.env.*
+!**/.env.example
 .git
 .vscode
 *.log

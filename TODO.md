@@ -3,6 +3,19 @@
 
 Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação e controle granular de acesso.
 
+## Status geral
+
+| Fase | Status |
+| --- | --- |
+| 1. Foundation | ✅ Concluído |
+| 2. Security Hardening | ✅ Concluído |
+| 3. Registration Policies | 🟡 Parcial — enforcement básico existe, falta fluxo de invite token e distinguir signup de login no bloqueio |
+| 4. Spotify Per-User | 🟡 Quase completo — falta encriptar credenciais em repouso |
+| 5. Widget Features | 🟡 Quase completo — cache de busca de tracks não existe (só dedupe de 3s) |
+| 6. Frontend Refactoring | 🟡 Parcial — falta extrair hooks e tema claro/escuro do painel |
+| 7. Testing & Quality | 🔴 Pendente — zero testes, zero lint config, zero pre-commit |
+| 8. CI/CD & Deploy | 🟡 Parcial — docs prontas, GitHub Actions não existe |
+
 ---
 
 ## ✅ Fase 1: Foundation (Concluído)
@@ -86,6 +99,7 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 
 ### Registration Policy: Invite Tokens
 
+- [x] `REGISTRATION_POLICY=invite_only` bloqueia GitHub com 403 (`auth-github.ts`), mas é só um bloqueio duro: não existe token de convite de verdade ainda
 - [ ] Nova rota: `POST /auth/invite/create` (admin only, retorna token)
 - [ ] Nova rota: `POST /auth/invite/redeem/:token` (qualquer um, cria user)
 - [ ] Token: armazenar em tabela `InviteToken` (token, expiresAt, createdBy, usedBy, usedAt)
@@ -94,8 +108,9 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 
 ### Registration Policy: Closed
 
-- [ ] Admin apenas cria contas manualmente (future work)
-- [ ] Sem rotas de signup públicas
+- [x] `REGISTRATION_POLICY=closed` bloqueia GitHub com 403 (`auth-github.ts`)
+- [ ] **Bug**: o check roda antes do upsert e barra até usuário já existente tentando logar de novo, não só signup novo — devia distinguir os dois casos
+- [ ] Admin criar contas manualmente (sem rota ainda)
 
 ---
 
@@ -153,8 +168,8 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 
 - [x] `App.tsx` componentizado (nomes reais diferem do planejado aqui, mas a ideia foi feita):
   `DashboardHeader`, `LoginScreen`, `TabNav`, `WidgetEditorCard` (editor + preview juntos),
-  `SpotifyPanel`, `NowPlayingCard`, `UsersPanel`, `GitHubWhitelistPanel`,
-  `Button`/`ModalShell`/`Toggle`/`Segmented`/`DataTable` (compartilhados)
+  `SpotifyPanel`, `NowPlayingCard`, `UsersPanel`, `GitHubWhitelistPanel`, `FlagsModal`,
+  `Button`/`ModalShell`/`Toggle`/`Segmented`/`DataTable`/`ColorPicker` (compartilhados)
 - [ ] Separar em hooks (`useSession`, `useAuth`, `useConfig`, `useSpotify`): estado ainda vive
   centralizado em `App.tsx` e é passado via props, funciona mas não foi extraído em hooks
 
@@ -164,20 +179,6 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 - [ ] Tema claro/escuro do próprio painel (o widget gerado tem dark/light, o painel em si é só dark)
 - [x] Responsividade mobile (header, tabs, cards testados e ajustados)
 - [x] Feedback visual: loading states (skeleton, min-duration), mensagens de erro/sucesso inline
-
----
-
-## ✅ Extras concluídos fora do escopo original
-
-- Admin UI para gestão de usuários e whitelist GitHub (tabelas, batch import) no frontend
-- Fluxo de whitelist GitHub completo no backend (modelo, rotas admin, import do .env, reativação suave)
-- Postman collections e ambientes (auth, admin, public API) + README de uso
-- Variáveis do admin parametrizadas via `.env` (`VITE_DEV_PORT`, `VITE_BACKEND_URL`) e `vite.config.ts` lendo-as com `loadEnv`
-- Aparência customizável do widget via query param (fundo, cor do texto, escala) além de tema/spin/rainbow/scan
-- `pnpm audit`: 0 vulnerabilidades (era 51)
-- `biome ci` limpo em todo o projeto
-- Redesign completo do painel: editor unificado (config + preview), header com menu de usuário, tabelas e modais padronizados, contraste WCAG AA
-- Deploy real via Docker: `Dockerfile` + `docker-compose.yml` + entrypoint que gera segredos sozinho na 1ª execução, testado ponta a ponta
 
 ---
 
@@ -215,9 +216,24 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 ### Documentation
 
 - [x] README.md completo (revisado contra o código real, com diagrama Mermaid)
-- [x] Como hospedar self-hosted (coberto na seção "🐳 Docker Quickstart" do README, sem arquivo separado)
+- [x] Como hospedar self-hosted (coberto na seção "🐳 Docker" do README, sem arquivo separado)
 - [ ] API.md (documentar endpoints)
 - [x] Diagrama de fluxo (Mermaid, embutido no README, sem arquivo ARCHITECTURE.md separado)
+
+---
+
+## ✅ Extras concluídos fora do escopo original
+
+- Admin UI para gestão de usuários e whitelist GitHub (tabelas, batch import) no frontend
+- Fluxo de whitelist GitHub completo no backend (modelo, rotas admin, import do .env, reativação suave)
+- Postman collections e ambientes (auth, admin, public API) + README de uso
+- Variáveis do admin parametrizadas via `.env` (`VITE_DEV_PORT`, `VITE_BACKEND_URL`) e `vite.config.ts` lendo-as com `loadEnv`
+- Aparência customizável do widget via query param (fundo, cor do texto, escala) além de tema/spin/rainbow/scan
+- `pnpm audit`: 0 vulnerabilidades (era 51)
+- `biome ci` limpo em todo o projeto
+- Redesign completo do painel: editor unificado (config + preview), header com menu de usuário, tabelas e modais padronizados, contraste WCAG AA
+- Widget customization completo: color picker próprio (react-colorful, popover) pra fundo/texto e slider de escala no editor
+- Deploy real via Docker: `Dockerfile` + `docker-compose.yml` + entrypoint que gera segredos sozinho na 1ª execução, testado ponta a ponta
 
 ---
 
@@ -238,7 +254,6 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 
 ### Advanced Features (Very Future)
 
-- [ ] Widget customization (color picker, font size)
 - [ ] Playlist support (mostrar faixas de playlist)
 - [ ] Multiple widgets por user
 - [ ] Compartilhar config entre users
@@ -246,11 +261,10 @@ Projeto de widget Spotify multi-usuário com múltiplos modos de autenticação 
 
 ---
 
-## 🎯 Priorização Recomendada
+## 🎯 Próximos passos sugeridos
 
-1. **Segurança** (Fase 2): rate limit, validação, password hashing
-2. **Políticas de Signup** (Fase 3): open → whitelist → invite → closed
-3. **Spotify Per-User** (Fase 4): credenciais, storage, UI
-4. **Widget Features** (Fase 5): integração real com Spotify
-5. **Frontend** (Fase 6): componentes, UX
-6. **Testes & Infra** (Fase 7-8): automação e deploy
+1. Corrigir o bug de bloqueio de usuário existente nas policies `closed`/`invite_only` (Fase 3)
+2. Testes automatizados: hoje é zero cobertura, maior risco real do projeto (Fase 7)
+3. GitHub Actions básico (build + lint + audit) antes de qualquer coisa mais além (Fase 8)
+4. Encriptar credenciais Spotify em repouso (Fase 4)
+5. Sistema de invite token de verdade, se a policy for pra valer (Fase 3)

@@ -9,6 +9,10 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      # prisma.config.ts exige a var setada mesmo só pra `prisma generate`
+      # (não usa banco de verdade, só precisa existir)
+      DATABASE_URL: file:./data/db.sqlite
     steps:
       - uses: actions/checkout@v4
 

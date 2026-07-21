@@ -45,7 +45,7 @@ export async function registerSpotifyAuthRoutes(app: FastifyInstance) {
     reply.setCookie('spotify_oauth_state', state, {
       httpOnly: true,
       sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
+      secure: env.NODE_ENV === 'production',
       maxAge: 60 * 5, // 5 minutos
       path: '/',
     })

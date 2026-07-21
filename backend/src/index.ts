@@ -122,6 +122,7 @@ export async function buildApp(): Promise<FastifyInstance> {
                   "'unsafe-inline'",
                   'https://fonts.googleapis.com',
                 ],
+                fontSrc: ["'self'", 'https://fonts.gstatic.com'],
                 imgSrc: [
                   "'self'",
                   'data:',

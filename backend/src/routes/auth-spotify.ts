@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { loadConfig } from '../lib/config.js'
 import { getUserByUsername, prisma } from '../lib/db.js'
+import { fetchWithTimeout } from '../lib/http.js'
 
 export async function registerSpotifyAuthRoutes(app: FastifyInstance) {
   const env = loadConfig()
@@ -110,7 +111,7 @@ export async function registerSpotifyAuthRoutes(app: FastifyInstance) {
     ).toString('base64')
 
     try {
-      const tokenResponse = await fetch(tokenUrl, {
+      const tokenResponse = await fetchWithTimeout(tokenUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',

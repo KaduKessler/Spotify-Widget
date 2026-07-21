@@ -5,6 +5,7 @@ import {
   getUserByUsername,
   upsertConfig,
 } from '../lib/db.js'
+import { fetchWithTimeout } from '../lib/http.js'
 import { renderSvg } from '../lib/svg.js'
 import { parseWidgetConfig } from '../lib/validation.js'
 import {
@@ -14,7 +15,7 @@ import {
 
 async function toDataUri(url: string): Promise<string | undefined> {
   try {
-    const res = await fetch(url)
+    const res = await fetchWithTimeout(url)
     if (!res.ok) return undefined
     const buf = Buffer.from(await res.arrayBuffer())
     const mime = res.headers.get('content-type') || 'image/jpeg'
@@ -361,7 +362,7 @@ async function getScanCodeDataUri(
   // Exemplo: https://scannables.scdn.co/uri/plain/png/000000/white/640/spotify:track:...
   const url = `https://scannables.scdn.co/uri/plain/png/000000/white/640/${encodeURIComponent(spotifyUri)}`
   try {
-    const res = await fetch(url)
+    const res = await fetchWithTimeout(url)
     if (!res.ok) return undefined
     const buf = Buffer.from(await res.arrayBuffer())
     return `data:image/png;base64,${buf.toString('base64')}`

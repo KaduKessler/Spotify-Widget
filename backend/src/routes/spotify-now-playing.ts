@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../lib/db.js'
+import { fetchWithTimeout } from '../lib/http.js'
 
 interface SpotifyTrack {
   id: string
@@ -50,7 +51,7 @@ async function refreshSpotifyToken(
   ).toString('base64')
 
   try {
-    const response = await fetch(tokenUrl, {
+    const response = await fetchWithTimeout(tokenUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -176,9 +177,12 @@ export async function getTrackDetailsForUser(
   if (!accessToken) return null
 
   try {
-    const response = await fetch(`https://api.spotify.com/v1/tracks/${id}`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })
+    const response = await fetchWithTimeout(
+      `https://api.spotify.com/v1/tracks/${id}`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      },
+    )
     if (!response.ok) return null
 
     const track = (await response.json()) as SpotifyTrack
@@ -250,7 +254,7 @@ async function fetchNowPlayingForUser(
   if (!accessToken) return null
 
   // Tenta buscar a música atual
-  const currentlyPlayingResponse = await fetch(
+  const currentlyPlayingResponse = await fetchWithTimeout(
     'https://api.spotify.com/v1/me/player/currently-playing',
     {
       headers: {
@@ -281,7 +285,7 @@ async function fetchNowPlayingForUser(
   }
 
   // Fallback: busca a última música tocada
-  const recentlyPlayedResponse = await fetch(
+  const recentlyPlayedResponse = await fetchWithTimeout(
     'https://api.spotify.com/v1/me/player/recently-played?limit=1',
     {
       headers: {
@@ -364,7 +368,7 @@ export async function registerSpotifyNowPlayingRoutes(app: FastifyInstance) {
 
     try {
       // Tenta buscar currently playing
-      const currentlyPlayingResponse = await fetch(
+      const currentlyPlayingResponse = await fetchWithTimeout(
         'https://api.spotify.com/v1/me/player/currently-playing',
         {
           headers: {
@@ -394,7 +398,7 @@ export async function registerSpotifyNowPlayingRoutes(app: FastifyInstance) {
       }
 
       // Se não está tocando nada, busca recently played
-      const recentlyPlayedResponse = await fetch(
+      const recentlyPlayedResponse = await fetchWithTimeout(
         'https://api.spotify.com/v1/me/player/recently-played?limit=1',
         {
           headers: {

@@ -6,6 +6,7 @@ import {
   isGitHubWhitelisted,
   upsertUser,
 } from '../lib/db.js'
+import { fetchWithTimeout } from '../lib/http.js'
 
 export async function registerGithubAuthRoutes(app: FastifyInstance) {
   const env = loadConfig()
@@ -61,7 +62,7 @@ export async function registerGithubAuthRoutes(app: FastifyInstance) {
     reply.clearCookie('oauth_state', { path: '/' })
 
     // Troca code por access_token
-    const tokenRes = await fetch(
+    const tokenRes = await fetchWithTimeout(
       'https://github.com/login/oauth/access_token',
       {
         method: 'POST',
@@ -96,7 +97,7 @@ export async function registerGithubAuthRoutes(app: FastifyInstance) {
     const accessToken = tokenJson.access_token
 
     // Busca dados do usuário
-    const userRes = await fetch('https://api.github.com/user', {
+    const userRes = await fetchWithTimeout('https://api.github.com/user', {
       headers: {
         Accept: 'application/vnd.github+json',
         Authorization: `Bearer ${accessToken}`,

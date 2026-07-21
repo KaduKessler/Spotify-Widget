@@ -1,7 +1,9 @@
+import { Github } from 'lucide-react'
 import { useState } from 'react'
 import DashboardHeader from './components/DashboardHeader'
 import FlagsModal from './components/FlagsModal'
 import GitHubWhitelistPanel from './components/GitHubWhitelistPanel'
+import LoadingScreen from './components/LoadingScreen'
 import LoginScreen from './components/LoginScreen'
 import NowPlayingCard from './components/NowPlayingCard'
 import SpotifyPanel from './components/SpotifyPanel'
@@ -20,11 +22,7 @@ export default function App() {
 
   // LOADING inicial
   if (!auth.authProviders.length || auth.checkingAuth) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-900 text-neutral-100">
-        <p className="text-lg text-neutral-300">Carregando painel...</p>
-      </div>
-    )
+    return <LoadingScreen label="Carregando painel..." />
   }
 
   // Se não autenticado → tela de login adequada pro provider
@@ -49,11 +47,7 @@ export default function App() {
 
   // Autenticado → painel normal
   if (widget.loadingConfig || !widget.config) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-900 text-neutral-100">
-        <p className="text-lg text-neutral-300">Carregando configuração...</p>
-      </div>
-    )
+    return <LoadingScreen label="Carregando configuração..." />
   }
 
   const config = widget.config
@@ -171,6 +165,20 @@ export default function App() {
             </>
           )}
         </div>
+
+        <footer className="relative z-10 flex items-center justify-center gap-1.5 pb-6 text-[11px] text-neutral-600">
+          <a
+            href="https://github.com/KaduKessler/Spotify-Widget"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 transition-colors duration-150 hover:text-neutral-400"
+          >
+            <Github aria-hidden="true" className="h-3.5 w-3.5" />
+            Spotify Widget
+          </a>
+          <span aria-hidden="true">·</span>
+          <span className="font-mono">v{__APP_VERSION__}</span>
+        </footer>
       </div>
 
       <FlagsModal

@@ -74,7 +74,8 @@ export async function registerSpotifyAuthRoutes(app: FastifyInstance) {
 
     if (error) {
       app.log.warn({ error }, 'Spotify OAuth error')
-      return reply.redirect('/admin?spotify_error=access_denied')
+      const frontendUrl = env.ADMIN_URL.replace(/\/$/, '')
+      return reply.redirect(`${frontendUrl}/?spotify_error=access_denied`)
     }
 
     if (!code || !state) {
@@ -125,7 +126,10 @@ export async function registerSpotifyAuthRoutes(app: FastifyInstance) {
       if (!tokenResponse.ok) {
         const errorData = await tokenResponse.json()
         app.log.error({ error: errorData }, 'Failed to exchange code for token')
-        return reply.redirect('/admin?spotify_error=token_exchange_failed')
+        const frontendUrl = env.ADMIN_URL.replace(/\/$/, '')
+        return reply.redirect(
+          `${frontendUrl}/?spotify_error=token_exchange_failed`,
+        )
       }
 
       const tokenData = (await tokenResponse.json()) as {
@@ -152,11 +156,11 @@ export async function registerSpotifyAuthRoutes(app: FastifyInstance) {
 
       // Redireciona de volta para o admin (frontend)
       const frontendUrl = env.ADMIN_URL.replace(/\/$/, '')
-      return reply.redirect(`${frontendUrl}?spotify_success=true`)
+      return reply.redirect(`${frontendUrl}/?spotify_success=true`)
     } catch (err) {
       app.log.error({ err }, 'Error during Spotify OAuth')
       const frontendUrl = env.ADMIN_URL.replace(/\/$/, '')
-      return reply.redirect(`${frontendUrl}?spotify_error=unknown`)
+      return reply.redirect(`${frontendUrl}/?spotify_error=unknown`)
     }
   })
 }

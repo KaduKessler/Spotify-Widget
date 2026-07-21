@@ -136,7 +136,11 @@ export function useAuth() {
   }
 
   function handleLoginWithGithub() {
-    window.location.href = '/auth/github'
+    // Precisa ir direto pro backend (não pelo proxy do vite): o cookie de
+    // state é validado no callback, que o GitHub chama na origem do
+    // APP_URL, não na origem do vite dev server.
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || ''
+    window.location.href = `${backendUrl}/auth/github`
   }
 
   // Avatar do usuário (usa avatar do GitHub quando disponível)

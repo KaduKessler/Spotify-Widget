@@ -85,7 +85,9 @@ export default function DashboardHeader({
               {initials}
             </span>
           )}
-          <span className="text-xs font-mono text-neutral-100">{username}</span>
+          <span className="max-w-[8rem] truncate text-xs font-mono text-neutral-100 sm:max-w-[12rem]">
+            {username}
+          </span>
           <ChevronDown
             aria-hidden="true"
             className={`h-3.5 w-3.5 text-neutral-400 transition-transform duration-150 ${open ? 'rotate-180' : ''}`}

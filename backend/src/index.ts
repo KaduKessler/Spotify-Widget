@@ -127,6 +127,7 @@ export async function buildApp(): Promise<FastifyInstance> {
                   'data:',
                   'https://avatars.githubusercontent.com',
                   'https://github.com',
+                  'https://i.scdn.co',
                 ],
                 connectSrc: ["'self'"],
               },

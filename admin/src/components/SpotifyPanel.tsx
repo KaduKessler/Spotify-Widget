@@ -1,4 +1,5 @@
-import { Check, Music, Trash2, Unlink } from 'lucide-react'
+import { Check, Copy, Music, Trash2, Unlink } from 'lucide-react'
+import { useState } from 'react'
 import Button from './Button'
 
 export type SpotifyPanelProps = {
@@ -14,6 +15,7 @@ export type SpotifyPanelProps = {
   spotifySuccess: string | null
   spotifyConnected: boolean
   loadingSpotifyStatus: boolean
+  spotifyRedirectUri: string
   onClientIdChange: (value: string) => void
   onClientSecretChange: (value: string) => void
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void
@@ -31,6 +33,7 @@ export default function SpotifyPanel({
   spotifySuccess,
   spotifyConnected,
   loadingSpotifyStatus,
+  spotifyRedirectUri,
   onClientIdChange,
   onClientSecretChange,
   onSubmit,
@@ -38,6 +41,14 @@ export default function SpotifyPanel({
   onConnect,
   onDisconnect,
 }: SpotifyPanelProps) {
+  const [copiedRedirectUri, setCopiedRedirectUri] = useState(false)
+
+  function copyRedirectUri() {
+    navigator.clipboard.writeText(spotifyRedirectUri)
+    setCopiedRedirectUri(true)
+    setTimeout(() => setCopiedRedirectUri(false), 1400)
+  }
+
   return (
     <section className="space-y-3">
       <p className="text-xs uppercase tracking-[0.14em] text-neutral-400">
@@ -61,6 +72,48 @@ export default function SpotifyPanel({
             </span>
           )}
         </div>
+
+        {!spotifyConfig?.configured && (
+          <div className="space-y-2.5 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-neutral-300">
+            <p className="font-medium text-neutral-100">
+              Como conseguir suas credenciais
+            </p>
+            <ol className="list-decimal space-y-1.5 pl-4 text-neutral-400">
+              <li>
+                Crie um app em{' '}
+                <a
+                  href="https://developer.spotify.com/dashboard"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-emerald-400 hover:underline"
+                >
+                  developer.spotify.com/dashboard
+                </a>
+              </li>
+              <li>
+                Em "Redirect URIs", cole a URL abaixo
+                <div className="mt-1.5 flex items-center gap-1.5">
+                  <code className="min-w-0 flex-1 truncate rounded-lg border border-white/10 bg-neutral-900/80 px-2.5 py-1.5 font-mono text-[11px] text-neutral-300">
+                    {spotifyRedirectUri}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={copyRedirectUri}
+                    className="flex shrink-0 items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-[11px] text-neutral-300 transition-all duration-150 hover:border-emerald-400/60 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70"
+                  >
+                    {copiedRedirectUri ? (
+                      <Check aria-hidden="true" className="h-3 w-3" />
+                    ) : (
+                      <Copy aria-hidden="true" className="h-3 w-3" />
+                    )}
+                    {copiedRedirectUri ? 'Copiado' : 'Copiar'}
+                  </button>
+                </div>
+              </li>
+              <li>Cole o Client ID e o Client Secret abaixo</li>
+            </ol>
+          </div>
+        )}
 
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-1.5">
@@ -138,17 +191,19 @@ export default function SpotifyPanel({
             )}
           </div>
 
-          <p className="text-[11px] text-neutral-400 leading-relaxed">
-            Obtenha suas credenciais em{' '}
-            <a
-              href="https://developer.spotify.com/dashboard"
-              target="_blank"
-              rel="noreferrer"
-              className="text-emerald-400 hover:underline"
-            >
-              Spotify Developer Dashboard
-            </a>
-          </p>
+          {spotifyConfig?.configured && (
+            <p className="text-[11px] text-neutral-400 leading-relaxed">
+              Gerencie seu app em{' '}
+              <a
+                href="https://developer.spotify.com/dashboard"
+                target="_blank"
+                rel="noreferrer"
+                className="text-emerald-400 hover:underline"
+              >
+                Spotify Developer Dashboard
+              </a>
+            </p>
+          )}
         </form>
 
         {spotifyConfig?.configured && (

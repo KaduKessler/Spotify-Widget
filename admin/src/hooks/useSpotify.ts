@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { del, post, postJson, requestJson } from '../api/client'
 import { withMinDuration } from '../lib/withMinDuration'
 import type { Me } from './useAuth'
@@ -33,6 +33,15 @@ export function useSpotify(me: Me | null) {
 
   const [nowPlaying, setNowPlaying] = useState<NowPlaying>(null)
   const [loadingNowPlaying, setLoadingNowPlaying] = useState(false)
+
+  // Redirect URI que precisa ser cadastrada no app do Spotify Developer
+  // Dashboard. Mesma origem usada pra iniciar o fluxo (ver handleConnectSpotify).
+  const spotifyRedirectUri = useMemo(() => {
+    const backendUrl =
+      import.meta.env.VITE_BACKEND_URL ||
+      (typeof window !== 'undefined' ? window.location.origin : '')
+    return `${backendUrl}/auth/spotify/callback`
+  }, [])
 
   const fetchNowPlaying = useCallback(async () => {
     setLoadingNowPlaying(true)
@@ -180,6 +189,7 @@ export function useSpotify(me: Me | null) {
     loadingSpotifyStatus,
     nowPlaying,
     loadingNowPlaying,
+    spotifyRedirectUri,
     setSpotifyClientId,
     setSpotifyClientSecret,
     fetchNowPlaying,

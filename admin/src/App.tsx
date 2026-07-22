@@ -155,6 +155,7 @@ export default function App() {
                 spotifySuccess={spotify.spotifySuccess}
                 spotifyConnected={spotify.spotifyConnected}
                 loadingSpotifyStatus={spotify.loadingSpotifyStatus}
+                spotifyRedirectUri={spotify.spotifyRedirectUri}
                 onClientIdChange={spotify.setSpotifyClientId}
                 onClientSecretChange={spotify.setSpotifyClientSecret}
                 onSubmit={spotify.handleSaveSpotify}

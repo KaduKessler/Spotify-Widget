@@ -94,7 +94,7 @@ pnpm dev  # backend (porta 3000) + admin (porta 5173) juntos
 
 Acesse `http://127.0.0.1:5173` pro painel em dev, ou `http://127.0.0.1:3000/widget` pra ver o SVG puro.
 
-> Credenciais do Spotify (Client ID/Secret) **não vão no `.env`**. Cada usuário cadastra as suas próprias na aba Configuração do painel, depois de logar.
+> Credenciais do Spotify (Client ID/Secret) **não vão no `.env`**. Cada usuário cadastra as suas próprias na aba Configuração do painel, depois de logar. O painel mostra a Redirect URI (`{APP_URL}/auth/spotify/callback`) pronta pra copiar e colar no app criado em [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard).
 
 </details>
 
@@ -283,6 +283,8 @@ ADMIN_URL=http://localhost:3000/admin
 ```
 
 > `ADMIN_USERNAME=admin` sozinho é rejeitado de propósito (checagem de segurança). Use qualquer outro valor.
+
+> Acesse sempre pelo mesmo host configurado em `APP_URL`/`ADMIN_URL`. `localhost` e `127.0.0.1` são origens diferentes pra cookie de sessão, mesmo apontando pro mesmo lugar: configurou com `localhost`, acesse com `localhost` (não `127.0.0.1`), senão o login quebra.
 
 **Comandos úteis**
 

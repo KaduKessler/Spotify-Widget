@@ -162,8 +162,11 @@ export function useSpotify(me: Me | null) {
       setSpotifyError('Configure suas credenciais do Spotify primeiro')
       return
     }
-    // URL relativa pra passar pelo proxy do Vite
-    window.location.href = '/auth/spotify'
+    // Precisa ir direto pro backend (nao pelo proxy do vite): o cookie de
+    // state e validado no callback, que o Spotify chama na origem do
+    // APP_URL, nao na origem do vite dev server.
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || ''
+    window.location.href = `${backendUrl}/auth/spotify`
   }
 
   return {

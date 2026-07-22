@@ -1,4 +1,5 @@
 import { ExternalLink, Pause, Play, RefreshCw } from 'lucide-react'
+import { useEffect } from 'react'
 
 type NowPlaying = {
   isPlaying: boolean
@@ -23,13 +24,22 @@ export default function NowPlayingCard({
   loadingNowPlaying,
   onRefresh,
 }: NowPlayingCardProps) {
+  // Sem isso, o card mostra um snapshot congelado (ex: continua "Tocando"
+  // mesmo depois de pausar no Spotify) ate alguem clicar em atualizar.
+  useEffect(() => {
+    const interval = setInterval(onRefresh, 15000)
+    return () => clearInterval(interval)
+  }, [onRefresh])
+
   return (
     <div
       className="fade-in-up flex items-center gap-3 rounded-2xl border border-white/8 bg-neutral-900/70 px-4 py-3 backdrop-blur-xl shadow-[0_20px_90px_rgba(0,0,0,0.45)]"
       style={{ animationDelay: '150ms', animationFillMode: 'backwards' }}
     >
       <span className="shrink-0 text-[10px] uppercase tracking-[0.14em] text-neutral-500">
-        Tocando agora no Spotify
+        {nowPlaying?.isPlaying
+          ? 'Tocando agora no Spotify'
+          : 'Última música no Spotify'}
       </span>
 
       {nowPlaying ? (

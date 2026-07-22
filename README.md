@@ -15,19 +15,19 @@
 
 ---
 
-## ✨ O que ele faz
+## O que ele faz
 
-| | |
+| Recurso | Descrição |
 | --- | --- |
-| 🎵 **Now Playing** | mostra a música que você está ouvindo, em tempo real |
-| 📌 **Track fixa** | ou fixa uma música específica pra exibir sempre |
-| 🎨 **Aparência sob demanda** | tema, fundo, cor do texto e escala, tudo via query param, sem precisar salvar |
-| 🔒 **Privacidade** | um toggle esconde os dados públicos a qualquer momento |
-| 👥 **Multi-usuário** | RBAC completo (admin / user / viewer), pra hospedar pra mais gente |
-| 🔐 **Login flexível** | senha, GitHub OAuth ou modo público, dá pra combinar |
-| 🐳 **Deploy zero-config** | `docker compose up --build -d` e pronto |
+| **Now Playing** | mostra a música que você está ouvindo, em tempo real |
+| **Track fixa** | ou fixa uma música específica pra exibir sempre |
+| **Aparência sob demanda** | tema, fundo, cor do texto e escala, tudo via query param, sem precisar salvar |
+| **Privacidade** | um toggle esconde os dados públicos a qualquer momento |
+| **Multi-usuário** | RBAC completo (admin / user / viewer), pra hospedar pra mais gente |
+| **Login flexível** | senha, GitHub OAuth ou modo público, dá pra combinar |
+| **Deploy zero-config** | `docker compose up --build -d` e pronto |
 
-## 🗺️ Como as peças se encaixam
+## Como as peças se encaixam
 
 ```mermaid
 flowchart LR
@@ -55,7 +55,7 @@ flowchart LR
 
 O backend serve duas coisas: a rota pública `/widget` (o SVG) e o painel `/admin` (a SPA de configuração). Cada usuário guarda as próprias credenciais do Spotify no banco. Não existe client ID/secret "global" no `.env`.
 
-## 🚀 Quick Start
+## Quick Start
 
 **A forma mais rápida:**
 
@@ -65,7 +65,7 @@ cd Spotify-Widget
 docker compose up --build -d
 ```
 
-Sem `.env`, sem segredo pra gerar na mão. Na primeira execução, o container cria e imprime uma senha de admin sozinho. Detalhes na seção "🐳 Docker" mais abaixo.
+Sem `.env`, sem segredo pra gerar na mão. Na primeira execução, o container cria e imprime uma senha de admin sozinho. Detalhes na seção "Docker" mais abaixo.
 
 <details>
 <summary><strong>Ou direto na máquina, sem Docker</strong></summary>
@@ -98,7 +98,7 @@ Acesse `http://127.0.0.1:5173` pro painel em dev, ou `http://127.0.0.1:3000/widg
 
 </details>
 
-## 🎨 Como usar o widget
+## Como usar o widget
 
 ```markdown
 ![Spotify](https://seu-dominio.com/widget?user=seu_username)
@@ -134,7 +134,7 @@ O jeito mais fácil de montar essa URL é copiar direto do painel (aba Configura
 
 </details>
 
-## 🎛 Painel administrativo
+## Painel administrativo
 
 Três abas, depois de logar em `/admin`:
 
@@ -244,11 +244,11 @@ ALLOW_PASSWORD_SIGNUP=true          # false = só o admin inicial do env loga
 
 </details>
 
-## 🔒 Privacidade
+## Privacidade
 
 O toggle **"Expor dados no JSON público"** (modal Flags) controla o endpoint `/user/api/:username`: ligado, retorna os dados da track; desligado, responde `204 No Content` e esconde tudo. Bom pra pausar a exibição sem desconfigurar o widget.
 
-## 🐳 Docker
+## Docker
 
 ```bash
 docker compose up --build -d
@@ -309,7 +309,7 @@ docker run -d --name spotify-widget \
 
 Mesmas variáveis de ambiente da seção acima (`-e SESSION_SECRET=... -e ADMIN_USERNAME=...` etc, ou um `--env-file .env`). `latest` segue a versão estável mais recente (tag `vX.Y.Z`); imagem também publicada com tags de versão fixa pra quem quiser pinar (`:v1.0.0`, `:v1`, `:v1.0`).
 
-## 📦 Estrutura do projeto
+## Estrutura do projeto
 
 ```text
 Spotify-Widget/
@@ -330,7 +330,7 @@ Spotify-Widget/
 └── TODO.md
 ```
 
-## 🧪 Desenvolvimento
+## Desenvolvimento
 
 ```bash
 pnpm dev         # backend + admin juntos, a partir da raiz
@@ -368,7 +368,7 @@ git push origin v1.0.0
 
 Isso builda e publica `ghcr.io/kadukessler/spotify-widget` com as tags `latest`, `v1.0.0`, `v1.0` e `v1`.
 
-## 📝 Variáveis de ambiente
+## Variáveis de ambiente
 
 Lidas de `backend/.env` (ou injetadas direto como env var, no caso do Docker). Não existe `PORT`/`HOST` configurável, o servidor sempre sobe em `0.0.0.0:3000`, nem credencial global de Spotify: cada usuário guarda a sua própria no painel.
 
